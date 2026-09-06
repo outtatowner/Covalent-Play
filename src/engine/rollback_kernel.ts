@@ -91,12 +91,16 @@ export class CovalentRollbackSieve {
       timestamp: performance.now(),
       human_vector: [floatToQ16(human.x), floatToQ16(human.y), floatToQ16(human.vx)],
       be_vector: [floatToQ16(be.x), floatToQ16(be.y), floatToQ16(be.vx)],
+      human_pos_3d: [floatToQ16(human.x), floatToQ16(human.y), floatToQ16(human.z || 0)],
+      be_pos_3d: [floatToQ16(be.x), floatToQ16(be.y), floatToQ16(be.z || 0)],
+      human_rot_3d: [floatToQ16(human.pitch), floatToQ16(human.yaw), floatToQ16(human.roll)],
       topology_hash: topoHash,
       human_energy: human.energy,
       be_energy: be.energy,
       human_stasis: human.stasisLockRemainingTicks,
       be_stasis: be.stasisLockRemainingTicks,
       arena_points_state: this.arena.hull.points.map(p => ({ x: p.x, y: p.y })),
+      arena_points_state_3d: this.arena.hull.points.map(p => ({ x: p.x, y: p.y, z: p.z || 0 })),
       parity_valid: parityValid
     };
 

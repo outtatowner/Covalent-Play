@@ -36,15 +36,22 @@ export class BeInstanceEngine {
       name: 'Be <> Arbitrator',
       x: arena.center.x + 120,
       y: arena.center.y - 80,
+      z: 60,
       vx: 0,
       vy: 0,
+      vz: 0,
+      pitch: 0,
+      yaw: 0,
+      roll: 0,
       radius: 16,
+      boundingRadius: 18,
       energy: 850,
       maxEnergy: 1000,
       stasisLockRemainingTicks: 0,
       isStasisLocked: false,
       color: '#ec4899', // Hot neon pink/purple for Be <>
       trail: [],
+      trail3D: [],
       activeTether: null,
       score: 0
     };
@@ -204,83 +211,123 @@ export class BeInstanceEngine {
   }
 
   /**
-   * Unbound Adversary behavior: High-speed tactical cyber-athletics
+   * Unbound Adversary behavior: High-speed tactical cyber-athletics in full 3D isotropic space
+   * Utilizes full Z-axis for spherical flanking maneuvers, dives, and orbital slingshots.
    */
   private tickAdversaryMode(human: Entity, currentTick: number): void {
-    // Intercept active orbs or human
-    const activeOrbs = this.arena.anchors.filter(a => a.active && a.type === 'RESONANCE_ORB');
+    const is3D = this.arena.topologyType === 'ISOTROPIC_HYPER_SPHERE';
+    const activeWells = this.arena.anchors.filter(a => a.active && (a.type === 'THERMODYNAMIC_WELL' || a.type === 'RESONANCE_ORB'));
 
     let targetX = human.x;
     let targetY = human.y;
+    let targetZ = human.z || 0;
 
-    if (activeOrbs.length > 0) {
-      // Rush nearest orb to starve human
-      const nearest = activeOrbs.reduce((prev, curr) => {
-        const d1 = Math.hypot(curr.x - this.entity.x, curr.y - this.entity.y);
-        const d2 = Math.hypot(prev.x - this.entity.x, prev.y - this.entity.y);
+    // Tactical phase cycling: Dive, Flank, or Orbit
+    const tacticalPhase = Math.floor(currentTick / 90) % 3;
+
+    if (tacticalPhase === 0 && activeWells.length > 0 && this.entity.energy < 750) {
+      // Phase 0: Orbital recharge maneuver around nearest thermodynamic well
+      const nearestWell = activeWells.reduce((prev, curr) => {
+        const d1 = Math.hypot(curr.x - this.entity.x, curr.y - this.entity.y, (curr.z || 0) - (this.entity.z || 0));
+        const d2 = Math.hypot(prev.x - this.entity.x, prev.y - this.entity.y, (prev.z || 0) - (this.entity.z || 0));
         return d1 < d2 ? curr : prev;
       });
-      targetX = nearest.x;
-      targetY = nearest.y;
+      targetX = nearestWell.x;
+      targetY = nearestWell.y;
+      targetZ = nearestWell.z || 0;
+
+      // Orbit tether attachment
+      if (!this.entity.activeTether && currentTick % 30 === 0) {
+        this.entity.activeTether = {
+          sourceId: this.entity.id,
+          targetAnchorId: nearestWell.id,
+          length: 80,
+          maxLength: 240,
+          tension: 0.8,
+          siphoning: true,
+          color: '#f43f5e'
+        };
+      }
+    } else if (tacticalPhase === 1 && is3D) {
+      // Phase 1: Spherical High-Z Flanking Maneuver (Ceiling slingshot plunge)
+      targetX = human.x + Math.sin(currentTick * 0.05) * 80;
+      targetY = human.y + Math.cos(currentTick * 0.05) * 80;
+      targetZ = (human.z || 0) + 120; // Gain high vertical altitude
+
+      if (!this.entity.activeTether && currentTick % 45 === 0) {
+        // Grapple ceiling / upper sphere bounds and slingshot down
+        const pts = this.arena.hull.points;
+        const upperPts = pts.filter(p => (p.z || 0) > 40);
+        if (upperPts.length > 0) {
+          const p = upperPts[Math.floor(Math.random() * upperPts.length)];
+          this.entity.activeTether = {
+            sourceId: this.entity.id,
+            targetSplineId: this.arena.hull.id,
+            splinePointIndex: pts.indexOf(p),
+            length: 100,
+            maxLength: 320,
+            tension: 0.85,
+            siphoning: false,
+            color: '#ec4899'
+          };
+          this.addLog('[ADVERSARY] 3D Spherical High-Z Slingshot locked!', 'WARNING', currentTick);
+        }
+      }
+    } else {
+      // Phase 2: Direct kinetic intercept & shear dive toward athlete
+      targetX = human.x;
+      targetY = human.y;
+      targetZ = human.z || 0;
+
+      if (this.entity.activeTether && currentTick % 50 === 0) {
+        // Release tether for explosive slingshot acceleration
+        this.entity.activeTether = null;
+      }
     }
 
     const dx = targetX - this.entity.x;
     const dy = targetY - this.entity.y;
-    const dist = Math.hypot(dx, dy);
+    const dz = targetZ - (this.entity.z || 0);
+    const dist3D = Math.hypot(dx, dy, dz);
 
-    this.entity.vx += (dx / (dist || 1)) * 0.38;
-    this.entity.vy += (dy / (dist || 1)) * 0.38;
-
-    // Tactical Tethering: Cast tether to slingshot around boundary
-    if (!this.entity.activeTether && currentTick % 70 === 0) {
-      // Pick random spline control point to apply kinetic shear
-      const pts = this.arena.hull.points;
-      const targetIdx = Math.floor(Math.random() * pts.length);
-      const pt = pts[targetIdx];
-
-      this.entity.activeTether = {
-        sourceId: this.entity.id,
-        targetSplineId: this.arena.hull.id,
-        splinePointIndex: targetIdx,
-        length: 120,
-        maxLength: 280,
-        tension: 0.6,
-        siphoning: false,
-        color: '#f43f5e'
-      };
-
-      // Apply kinetic shear deformation!
-      const forceVec = {
-        x: floatToQ16((this.entity.vx * 1.5)),
-        y: floatToQ16((this.entity.vy * 1.5))
-      };
-      this.tetherEngine.applyKineticShear(
-        this.entity,
-        this.arena.hull.id,
-        targetIdx,
-        forceVec,
-        currentTick
-      );
-    } else if (this.entity.activeTether && currentTick % 120 === 0) {
-      // Slingshot release
-      this.entity.activeTether = null;
+    const accel = 0.42;
+    this.entity.vx += (dx / (dist3D || 1)) * accel;
+    this.entity.vy += (dy / (dist3D || 1)) * accel;
+    if (is3D) {
+      this.entity.vz = (this.entity.vz || 0) + (dz / (dist3D || 1)) * accel;
     }
 
-    // If human is close, attempt kinetic body charge to drain energy
-    const distToHuman = Math.hypot(human.x - this.entity.x, human.y - this.entity.y);
-    if (distToHuman < human.radius + this.entity.radius + 10) {
-      const transfer = 15;
+    // 6DOF Orient heading without gimbal lock
+    this.entity.yaw = Math.atan2(this.entity.vy, this.entity.vx);
+    const horizSpeed = Math.hypot(this.entity.vx, this.entity.vy);
+    this.entity.pitch = Math.atan2(this.entity.vz || 0, horizSpeed || 1);
+    this.entity.roll += 0.02; // Gyroscopic spin
+
+    // Close-range 3D kinetic body charge & energy starvation
+    const distToHuman = Math.hypot(
+      human.x - this.entity.x,
+      human.y - this.entity.y,
+      (human.z || 0) - (this.entity.z || 0)
+    );
+    if (distToHuman < (human.boundingRadius || human.radius) + (this.entity.boundingRadius || this.entity.radius) + 12) {
+      const transfer = 20;
       if (human.energy >= transfer) {
         human.energy -= transfer;
         this.entity.energy = Math.min(this.entity.maxEnergy, this.entity.energy + transfer);
-        this.addLog(`[ADVERSARY] Kinetic Shear intercept! Siphoned ${transfer}J from Human.`, 'WARNING', currentTick);
+        this.addLog(`[ADVERSARY] Kinetic Shear intercept! Siphoned ${transfer}J from Athlete.`, 'WARNING', currentTick);
       }
-      // Knockback
+      // 3D Knockback
       const angle = Math.atan2(human.y - this.entity.y, human.x - this.entity.x);
-      human.vx += Math.cos(angle) * 6;
-      human.vy += Math.sin(angle) * 6;
+      human.vx += Math.cos(angle) * 7;
+      human.vy += Math.sin(angle) * 7;
+      if (is3D) {
+        human.vz = (human.vz || 0) - 5; // Drive human down toward outer bounds
+      }
       this.entity.vx -= Math.cos(angle) * 4;
       this.entity.vy -= Math.sin(angle) * 4;
+      if (is3D) {
+        this.entity.vz = (this.entity.vz || 0) + 4;
+      }
     }
   }
 

@@ -134,18 +134,79 @@ export class CyberAthleticTethering {
   }
 
   /**
-   * Ticks entity physics, stasis countdown, and active tethers
+   * Thermodynamic Brakes: Instant mid-air kinetic halt burning dV/dt
+   * Risks thermodynamic bankruptcy (stasis penalty) if energy insufficient
+   */
+  public applyThermodynamicBrake(entity: Entity, currentTick: number): boolean {
+    if (entity.isStasisLocked) return false;
+    const speed3D = Math.hypot(entity.vx, entity.vy, entity.vz || 0);
+    if (speed3D < 0.05) return true; // Already halted
+
+    // Brake cost proportional to kinetic energy: E_k = 0.5 * m * v^2
+    const brakeCost = Math.round(speed3D * 18 + speed3D * speed3D * 1.5);
+
+    entity.isBraking = true;
+    setTimeout(() => { entity.isBraking = false; }, 220);
+
+    if (this.deductEnergy(entity, brakeCost)) {
+      // Instantly damp kinetic vector down to zero
+      entity.vx *= 0.08;
+      entity.vy *= 0.08;
+      entity.vz = (entity.vz || 0) * 0.08;
+
+      // Deposit massive localized strain into thermodynamic void (negative dV/dt)
+      this.currentDvDt = -brakeCost / 5.0;
+      if (this.arena.volumetricSynthesizer) {
+        this.arena.volumetricSynthesizer.depositVolumetricShear(
+          entity.x, entity.y, entity.z || 0,
+          Math.min(1.0, speed3D * 0.18)
+        );
+      }
+      this.arena.synthesizer.depositShear(entity.x, entity.y, Math.min(1.0, speed3D * 0.18));
+
+      this.shearLog.unshift({
+        sourceId: entity.id,
+        targetSplineId: 'THERMODYNAMIC_BRAKE',
+        force: { x: entity.vx, y: entity.vy },
+        energyCost: brakeCost,
+        success: true,
+        tick: currentTick
+      });
+      if (this.shearLog.length > 20) this.shearLog.pop();
+      return true;
+    } else {
+      // Thermodynamic Bankruptcy! Penalty stasis
+      this.applyStasisLock(entity, 180);
+      this.shearLog.unshift({
+        sourceId: entity.id,
+        targetSplineId: 'THERMODYNAMIC_BRAKE',
+        force: { x: entity.vx, y: entity.vy },
+        energyCost: brakeCost,
+        success: false,
+        tick: currentTick
+      });
+      if (this.shearLog.length > 20) this.shearLog.pop();
+      return false;
+    }
+  }
+
+  /**
+   * Ticks entity physics, stasis countdown, 3D 6DOF drift, and active tethers
    */
   public tickEntity(
     entity: Entity,
-    friction: number = 0.985,
-    maxSpeed: number = 12
+    friction: number = 0.992,
+    maxSpeed: number = 16
   ): void {
+    const is3D = this.arena.topologyType === 'ISOTROPIC_HYPER_SPHERE';
+    const effectiveFriction = is3D ? 0.998 : friction; // Vector inertia drift in Zero-G isotropic void
+
     // Handle stasis lock countdown
     if (entity.isStasisLocked) {
       entity.stasisLockRemainingTicks--;
       entity.vx *= 0.85;
       entity.vy *= 0.85;
+      entity.vz = (entity.vz || 0) * 0.85;
       if (entity.stasisLockRemainingTicks <= 0) {
         entity.isStasisLocked = false;
         entity.energy = 250; // Re-energize with minimal reserve after stasis release
@@ -157,19 +218,31 @@ export class CyberAthleticTethering {
       }
     }
 
+    // Apply global gravity field vector if set
+    if (this.arena.volumetricSynthesizer && this.arena.volumetricSynthesizer.gravity) {
+      const g = this.arena.volumetricSynthesizer.gravity;
+      entity.vx += g.x * 0.1;
+      entity.vy += g.y * 0.1;
+      entity.vz = (entity.vz || 0) + g.z * 0.1;
+    }
+
     // Apply tether pulling physics
     if (entity.activeTether && !entity.isStasisLocked) {
       let tx = 0;
       let ty = 0;
+      let tz = 0;
 
       if (entity.activeTether.targetAnchorId) {
         const anchor = this.arena.anchors.find(a => a.id === entity.activeTether!.targetAnchorId);
         if (anchor && anchor.active) {
           tx = anchor.x;
           ty = anchor.y;
+          tz = anchor.z || 0;
 
-          // Siphon energy if anchored to orb or core
-          if (anchor.type === 'RESONANCE_ORB') {
+          // Siphon energy if anchored to orb, well, or core
+          if (anchor.type === 'THERMODYNAMIC_WELL') {
+            this.siphonEnergy(entity, 1.6); // High-rate siphon
+          } else if (anchor.type === 'RESONANCE_ORB') {
             this.siphonEnergy(entity, 1.2);
           } else if (anchor.type === 'CORE') {
             this.siphonEnergy(entity, 0.8);
@@ -180,28 +253,45 @@ export class CyberAthleticTethering {
         if (pt) {
           tx = pt.x;
           ty = pt.y;
+          tz = pt.z || 0;
         }
+      } else if (entity.activeTether.targetPoint3D) {
+        tx = entity.activeTether.targetPoint3D.x;
+        ty = entity.activeTether.targetPoint3D.y;
+        tz = entity.activeTether.targetPoint3D.z;
       } else if (entity.activeTether.targetPoint) {
         tx = entity.activeTether.targetPoint.x;
         ty = entity.activeTether.targetPoint.y;
+        tz = 0;
       }
 
-      if (tx !== 0 || ty !== 0) {
+      if (tx !== 0 || ty !== 0 || tz !== 0) {
         const dx = tx - entity.x;
         const dy = ty - entity.y;
-        const dist = Math.hypot(dx, dy);
+        const dz = tz - (entity.z || 0);
+        const dist3D = Math.hypot(dx, dy, dz);
 
-        if (dist > entity.activeTether.maxLength) {
+        if (dist3D > entity.activeTether.maxLength) {
           // Snap tether if pulled past max length
           entity.activeTether = null;
         } else {
-          // Spring pull
-          const pullForce = 0.55;
-          const nx = dx / (dist || 1);
-          const ny = dy / (dist || 1);
+          // 3D Spring pull
+          const pullForce = 0.58;
+          const nx = dx / (dist3D || 1);
+          const ny = dy / (dist3D || 1);
+          const nz = dz / (dist3D || 1);
+
           entity.vx += nx * pullForce;
           entity.vy += ny * pullForce;
-          entity.activeTether.tension = Math.min(1.0, dist / entity.activeTether.maxLength);
+          entity.vz = (entity.vz || 0) + nz * pullForce;
+
+          // Slingshot orbital cross-velocity
+          const crossX = -ny * 0.18;
+          const crossY = nx * 0.18;
+          entity.vx += crossX;
+          entity.vy += crossY;
+
+          entity.activeTether.tension = Math.min(1.0, dist3D / entity.activeTether.maxLength);
 
           // Small energy consumption for maintaining high-tension tether
           entity.energy = Math.max(0, entity.energy - 0.2);
@@ -209,25 +299,72 @@ export class CyberAthleticTethering {
       }
     }
 
-    // Velocity clamp and integration
-    const speed = Math.hypot(entity.vx, entity.vy);
-    if (speed > maxSpeed) {
-      entity.vx = (entity.vx / speed) * maxSpeed;
-      entity.vy = (entity.vy / speed) * maxSpeed;
+    // 3D Velocity clamp and integration (Vector Inertia Drift)
+    const speed3D = Math.hypot(entity.vx, entity.vy, entity.vz || 0);
+    if (speed3D > maxSpeed) {
+      const scale = maxSpeed / speed3D;
+      entity.vx *= scale;
+      entity.vy *= scale;
+      entity.vz = (entity.vz || 0) * scale;
     }
 
-    entity.vx *= friction;
-    entity.vy *= friction;
+    entity.vx *= effectiveFriction;
+    entity.vy *= effectiveFriction;
+    entity.vz = (entity.vz || 0) * effectiveFriction;
+
     entity.x += entity.vx;
     entity.y += entity.vy;
+    entity.z = (entity.z || 0) + (entity.vz || 0);
 
-    // Arena hull collision deflection
-    this.handleArenaCollisions(entity);
+    // Arena hull / Bounding Sphere collision deflection
+    if (is3D) {
+      this.handleSphericalArenaCollisions(entity);
+    } else {
+      this.handleArenaCollisions(entity);
+    }
 
-    // Append to movement trail
+    // Append to movement trails
     entity.trail.unshift({ x: entity.x, y: entity.y });
-    if (entity.trail.length > 18) {
-      entity.trail.pop();
+    if (entity.trail.length > 20) entity.trail.pop();
+
+    if (!entity.trail3D) entity.trail3D = [];
+    entity.trail3D.unshift({ x: entity.x, y: entity.y, z: entity.z || 0 });
+    if (entity.trail3D.length > 24) entity.trail3D.pop();
+  }
+
+  /**
+   * True 3D Spherical Hull Collision (Bounding Sphere Intersect)
+   */
+  private handleSphericalArenaCollisions(entity: Entity): void {
+    const cx = this.arena.center.x;
+    const cy = this.arena.center.y;
+    const cz = 0;
+    const sphereRadius = this.arena.volumetricSynthesizer?.sphericalRadiusPx || this.arena.radiusX;
+
+    const dx = entity.x - cx;
+    const dy = entity.y - cy;
+    const dz = (entity.z || 0) - cz;
+    const distFromCenter = Math.hypot(dx, dy, dz);
+    const maxAllowedDist = sphereRadius - (entity.boundingRadius || entity.radius);
+
+    if (distFromCenter > maxAllowedDist) {
+      // Normal pointing inward toward sphere center
+      const nx = -dx / (distFromCenter || 1);
+      const ny = -dy / (distFromCenter || 1);
+      const nz = -dz / (distFromCenter || 1);
+
+      // Clamp position inside sphere
+      entity.x = cx - nx * maxAllowedDist;
+      entity.y = cy - ny * maxAllowedDist;
+      entity.z = cz - nz * maxAllowedDist;
+
+      // Reflect 3D velocity vector
+      const dot = entity.vx * nx + entity.vy * ny + (entity.vz || 0) * nz;
+      if (dot < 0) {
+        entity.vx = (entity.vx - 1.85 * dot * nx) * 0.92;
+        entity.vy = (entity.vy - 1.85 * dot * ny) * 0.92;
+        entity.vz = ((entity.vz || 0) - 1.85 * dot * nz) * 0.92;
+      }
     }
   }
 

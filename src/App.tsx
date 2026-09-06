@@ -38,7 +38,9 @@ import {
   ArrowDown,
   ArrowLeft,
   ArrowRight,
-  Maximize2
+  Maximize2,
+  Orbit,
+  Shield
 } from 'lucide-react';
 
 export default function App() {
@@ -54,15 +56,23 @@ export default function App() {
     name: 'Human Vector',
     x: 330,
     y: 350,
+    z: 0,
     vx: 0,
     vy: 0,
+    vz: 0,
+    pitch: 0,
+    yaw: 0,
+    roll: 0,
     radius: 16,
+    boundingRadius: 18,
     energy: 800,
     maxEnergy: 1000,
     stasisLockRemainingTicks: 0,
     isStasisLocked: false,
+    isBraking: false,
     color: '#06b6d4', // Cyan
     trail: [],
+    trail3D: [],
     activeTether: null,
     score: 0
   }));
@@ -73,7 +83,7 @@ export default function App() {
   const [audioEnabled, setAudioEnabled] = useState<boolean>(true);
   const [showBVH, setShowBVH] = useState<boolean>(false);
   const [showCoordinates, setShowCoordinates] = useState<boolean>(true);
-  const [selectedTopology, setSelectedTopology] = useState<TopologyType>('NULL_FRICTION_OCTAGON');
+  const [selectedTopology, setSelectedTopology] = useState<TopologyType>('ISOTROPIC_HYPER_SPHERE');
   const [compileFlash, setCompileFlash] = useState<boolean>(false);
 
   // Key state tracking
@@ -126,40 +136,80 @@ export default function App() {
         tickRef.current++;
         const t = tickRef.current;
 
-        // 1. Apply Human Input Thrust (WASD / Arrows)
-        if (!human.isStasisLocked) {
+        // 1. Thermodynamic Brake (Shift / B): Halts kinetic momentum and deposits -dV/dt strain
+        if (keysPressed.current['shift'] || keysPressed.current['b']) {
+          human.isBraking = true;
+          const braked = tetherEngine.applyThermodynamicBrake(human, t);
+          if (braked && t % 12 === 0) {
+            cyberAudio.playThermodynamicBrake();
+          }
+        } else {
+          human.isBraking = false;
+        }
+
+        // 2. Apply Human 6DOF Input Thrust
+        if (!human.isStasisLocked && !human.isBraking) {
           const thrust = 0.42;
+          const is3D = arena.topologyType === 'ISOTROPIC_HYPER_SPHERE';
+
+          // Planar XY Thrust
           if (keysPressed.current['w'] || keysPressed.current['arrowup']) human.vy -= thrust;
           if (keysPressed.current['s'] || keysPressed.current['arrowdown']) human.vy += thrust;
           if (keysPressed.current['a'] || keysPressed.current['arrowleft']) human.vx -= thrust;
           if (keysPressed.current['d'] || keysPressed.current['arrowright']) human.vx += thrust;
+
+          // Volumetric Z Thrust (Space / R = Ascend, C / F = Descend)
+          if (is3D) {
+            if (keysPressed.current[' '] || keysPressed.current['r']) human.vz = (human.vz || 0) + thrust;
+            if (keysPressed.current['c'] || keysPressed.current['f']) human.vz = (human.vz || 0) - thrust;
+          }
+
+          // 6DOF Roll Control (Q / E)
+          if (keysPressed.current['q']) human.roll -= 0.05;
+          if (keysPressed.current['e']) human.roll += 0.05;
+
+          // Compute 6DOF Attitude without gimbal lock
+          const horizSpeed = Math.hypot(human.vx, human.vy);
+          if (horizSpeed > 0.1) {
+            human.yaw = Math.atan2(human.vy, human.vx);
+          }
+          if (is3D && (Math.abs(human.vz || 0) > 0.1 || horizSpeed > 0.1)) {
+            human.pitch = Math.atan2(human.vz || 0, horizSpeed || 1);
+          }
         }
 
-        // 2. Tick Entities & Tethers
+        // 3. Tick Entities & Tethers
         tetherEngine.tickEntity(human);
         tetherEngine.tickEntity(beEngine.entity);
 
-        // 3. Tick Be <> Autonomous Arbitrator
+        // 4. Tick Be <> Autonomous Arbitrator
         beEngine.tickAI(human, t);
 
-        // 4. Tick Arena Spline Physics
+        // 5. Tick Arena Spline Physics
         arena.tickHullPhysics();
 
-        // 5. Quipu Core & Orb Absorption / Scoring
+        // 6. Quipu Core & 3D Thermodynamic Well Absorption / Scoring
+        const isHyperSphere = arena.topologyType === 'ISOTROPIC_HYPER_SPHERE';
         for (const a of arena.anchors) {
           if (!a.active) continue;
 
-          // Check if human touched anchor
-          const dHuman = Math.hypot(human.x - a.x, human.y - a.y);
-          if (dHuman < human.radius + a.radius) {
+          // Check if human touched anchor with 3D spherical bounds
+          const dHuman = isHyperSphere
+            ? Math.hypot(human.x - a.x, human.y - a.y, (human.z || 0) - (a.z || 0))
+            : Math.hypot(human.x - a.x, human.y - a.y);
+
+          if (dHuman < (human.boundingRadius || human.radius) + a.radius) {
             human.score += a.energyValue * 5;
             tetherEngine.siphonEnergy(human, a.energyValue);
             cyberAudio.playResonanceChime();
           }
 
           // Check if Be <> touched anchor
-          const dBe = Math.hypot(beEngine.entity.x - a.x, beEngine.entity.y - a.y);
-          if (dBe < beEngine.entity.radius + a.radius) {
+          const dBe = isHyperSphere
+            ? Math.hypot(beEngine.entity.x - a.x, beEngine.entity.y - a.y, (beEngine.entity.z || 0) - (a.z || 0))
+            : Math.hypot(beEngine.entity.x - a.x, beEngine.entity.y - a.y);
+
+          if (dBe < (beEngine.entity.boundingRadius || beEngine.entity.radius) + a.radius) {
             beEngine.entity.score += a.energyValue * 5;
             tetherEngine.siphonEnergy(beEngine.entity, a.energyValue);
           }
@@ -198,6 +248,15 @@ export default function App() {
     cyberAudio.playResonanceChime();
   };
 
+  // Dedicated Manifold Compile for 3D Volumetric Hyper-Sphere
+  const handleVolumetricExpansion = () => {
+    setSelectedTopology('ISOTROPIC_HYPER_SPHERE');
+    arena.synthesizeIsotropicHyperSphere();
+    setCompileFlash(true);
+    setTimeout(() => setCompileFlash(false), 900);
+    cyberAudio.playResonanceChime();
+  };
+
   // Be-Instance Mode Switcher
   const handleBeModeChange = (mode: BeStateMode) => {
     beEngine.setMode(mode, tickRef.current);
@@ -219,26 +278,39 @@ export default function App() {
     }
   };
 
-  // Slingshot Discharge Action
+  // Slingshot Discharge Action with 3D Tangential Boost
   const handleSlingshotDischarge = () => {
     if (!human.activeTether) return;
 
-    // Apply impulse along tangent of tether pull
-    const speed = Math.hypot(human.vx, human.vy);
-    const boost = 3.5;
-    if (speed > 0.1) {
-      human.vx += (human.vx / speed) * boost;
-      human.vy += (human.vy / speed) * boost;
+    // Apply impulse along 3D velocity vector
+    const speed3D = Math.hypot(human.vx, human.vy, human.vz || 0);
+    const boost = 4.2;
+    if (speed3D > 0.1) {
+      human.vx += (human.vx / speed3D) * boost;
+      human.vy += (human.vy / speed3D) * boost;
+      human.vz = (human.vz || 0) + ((human.vz || 0) / speed3D) * boost;
     }
     human.activeTether = null;
     cyberAudio.playKineticShear();
   };
 
   // Mobile On-Screen D-Pad button helpers
-  const handleVirtualThrust = (dx: number, dy: number) => {
+  const handleVirtualThrust = (dx: number, dy: number, dz: number = 0) => {
     if (human.isStasisLocked) return;
     human.vx += dx * 1.5;
     human.vy += dy * 1.5;
+    if (dz !== 0) {
+      human.vz = (human.vz || 0) + dz * 1.5;
+    }
+  };
+
+  const handleVirtualBrake = () => {
+    human.isBraking = true;
+    tetherEngine.applyThermodynamicBrake(human, tickRef.current);
+    cyberAudio.playThermodynamicBrake();
+    setTimeout(() => {
+      human.isBraking = false;
+    }, 400);
   };
 
   return (
@@ -259,7 +331,7 @@ export default function App() {
               </span>
             </div>
             <p className="text-[11px] text-slate-400 font-mono">
-              Zero-Latency Deterministic P2P Sparring Manifold
+              Zero-Latency Deterministic P2P Sparring Manifold // 6DOF Isotropic Expansion
             </p>
           </div>
         </div>
@@ -281,29 +353,51 @@ export default function App() {
 
         {/* Action Controls & Topologies */}
         <div className="flex flex-wrap items-center gap-2 font-mono text-xs">
+          {/* Volumetric 3D Expansion Action */}
+          <button
+            onClick={handleVolumetricExpansion}
+            title="Shatter DOOM 2.5D: Compile Volumetric 6DOF Isotropic Hyper-Sphere"
+            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg font-bold transition-all cursor-pointer border ${
+              selectedTopology === 'ISOTROPIC_HYPER_SPHERE'
+                ? 'bg-gradient-to-r from-cyan-600 via-indigo-600 to-pink-600 text-white border-pink-400 shadow-lg shadow-cyan-500/40 scale-105'
+                : 'bg-gradient-to-r from-[#0e1f38] to-[#162033] hover:from-cyan-900 hover:to-indigo-900 text-cyan-300 border-cyan-500/50'
+            }`}
+          >
+            <Orbit className="w-3.5 h-3.5 text-pink-400 animate-pulse" />
+            <span>3D VOLUMETRIC EXPANSION</span>
+          </button>
+
           {/* Manifold Compile Action */}
           <button
             onClick={handleManifoldCompile}
             title="Compile Baseline Sparring Manifold: The Null-Friction Octagon"
             className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg font-bold transition-all cursor-pointer border ${
-              compileFlash
+              compileFlash && selectedTopology === 'NULL_FRICTION_OCTAGON'
                 ? 'bg-rose-600 border-rose-400 text-white shadow-lg shadow-rose-500/50 scale-105'
                 : 'bg-gradient-to-r from-cyan-950 via-[#0c1f33] to-[#081829] hover:from-cyan-900 hover:to-cyan-800 text-cyan-300 border-cyan-500/60 shadow-md shadow-cyan-500/20'
             }`}
           >
-            <Zap className={`w-3.5 h-3.5 text-cyan-400 ${compileFlash ? 'animate-spin' : ''}`} />
-            <span>MANIFOLD COMPILE</span>
+            <Zap className="w-3.5 h-3.5 text-cyan-400" />
+            <span>NULL-FRICTION OCTAGON</span>
           </button>
 
           {/* Topology Selector */}
           <div className="flex bg-[#05070c] p-1 rounded-lg border border-[#1e293b]">
+            <button
+              onClick={() => handleTopologySelect('ISOTROPIC_HYPER_SPHERE')}
+              className={`px-2.5 py-1 rounded transition-colors cursor-pointer text-[11px] ${
+                selectedTopology === 'ISOTROPIC_HYPER_SPHERE' ? 'bg-cyan-600 text-white font-bold' : 'text-slate-400 hover:text-white'
+              }`}
+            >
+              Hyper-Sphere (3D)
+            </button>
             <button
               onClick={() => handleTopologySelect('NULL_FRICTION_OCTAGON')}
               className={`px-2.5 py-1 rounded transition-colors cursor-pointer text-[11px] ${
                 selectedTopology === 'NULL_FRICTION_OCTAGON' ? 'bg-cyan-600 text-white font-bold' : 'text-slate-400 hover:text-white'
               }`}
             >
-              Null-Friction Octagon
+              Octagon
             </button>
             <button
               onClick={() => handleTopologySelect('ALPHA_RING')}
@@ -319,7 +413,7 @@ export default function App() {
                 selectedTopology === 'HYPER_TOROID' ? 'bg-cyan-600 text-white font-bold' : 'text-slate-400 hover:text-white'
               }`}
             >
-              Hyper-Toroid
+              Toroid
             </button>
             <button
               onClick={() => handleTopologySelect('KLEIN_LATTICE')}
@@ -327,7 +421,7 @@ export default function App() {
                 selectedTopology === 'KLEIN_LATTICE' ? 'bg-cyan-600 text-white font-bold' : 'text-slate-400 hover:text-white'
               }`}
             >
-              Klein Lattice
+              Klein
             </button>
           </div>
 
@@ -384,17 +478,19 @@ export default function App() {
             <span className="w-2 h-2 rounded-full bg-cyan-400 animate-pulse" />
             <span className="text-slate-300 font-bold">MANIFOLD:</span>
             <span className="text-cyan-400 font-semibold">
-              {selectedTopology === 'NULL_FRICTION_OCTAGON' ? 'THE NULL-FRICTION OCTAGON' : selectedTopology}
+              {selectedTopology === 'ISOTROPIC_HYPER_SPHERE' ? 'ISOTROPIC HYPER-SPHERE (6DOF 3D)' : selectedTopology}
             </span>
             <span className="text-[10px] px-1.5 py-0.5 rounded bg-cyan-950/80 text-cyan-400 border border-cyan-800/60">
-              Q16.16 BOUNDS [0x04000000]
+              {selectedTopology === 'ISOTROPIC_HYPER_SPHERE' ? 'Q16.16 BOUNDING SPHERE [r=128u]' : 'Q16.16 BOUNDS [0x04000000]'}
             </span>
           </div>
 
           <div className="flex flex-wrap items-center gap-4 text-slate-400 text-[11px]">
             <div className="flex items-center gap-1.5">
-              <span className="text-slate-500">FLOOR:</span>
-              <span className="text-emerald-400">Zero-Roughness Mirror</span>
+              <span className="text-slate-500">GRAVITY FIELD:</span>
+              <span className="text-emerald-400">
+                {selectedTopology === 'ISOTROPIC_HYPER_SPHERE' ? '[0, 0, 0] Zero-G Isotropic' : 'Ground-Locked 2.5D'}
+              </span>
             </div>
             <div className="flex items-center gap-1.5">
               <span className="text-slate-500">dV/dt STRAIN:</span>
@@ -404,17 +500,21 @@ export default function App() {
             </div>
             <div className="flex items-center gap-1.5">
               <span className="text-slate-500">ANCHORS:</span>
-              <span className="text-cyan-300">4x 3D Lissajous Curves (±0x02000000)</span>
+              <span className="text-cyan-300">
+                {selectedTopology === 'ISOTROPIC_HYPER_SPHERE' ? '4x Tetrahedral 3D Lissajous Wells' : '4x 3D Lissajous Curves'}
+              </span>
             </div>
             <div className="flex items-center gap-1.5">
-              <span className="text-slate-500">HULLS:</span>
-              <span className="text-slate-200">Translucent Glass Bézier Splines</span>
+              <span className="text-slate-500">KINEMATICS:</span>
+              <span className="text-slate-200">
+                {selectedTopology === 'ISOTROPIC_HYPER_SPHERE' ? '6DOF CORDIC Pitch/Yaw/Roll' : 'Translucent Glass Bézier Splines'}
+              </span>
             </div>
           </div>
         </div>
 
         {/* Arena Viewport Container */}
-        <div className="relative w-full h-[520px] rounded-xl overflow-hidden border border-[#1e293b] shadow-2xl">
+        <div className="relative w-full h-[540px] rounded-xl overflow-hidden border border-[#1e293b] shadow-2xl">
           <CyberArenaCanvas
             arena={arena}
             tetherEngine={tetherEngine}
@@ -427,40 +527,64 @@ export default function App() {
             onShearApplied={() => {}}
           />
 
-          {/* Mobile On-Screen Virtual D-Pad */}
+          {/* Mobile On-Screen Virtual 6DOF Controls */}
           <div className="absolute bottom-4 right-4 z-20 flex flex-col items-center gap-1 sm:hidden bg-[#090d16]/90 p-2 rounded-xl border border-[#1e293b] backdrop-blur-md">
-            <button
-              onClick={() => handleVirtualThrust(0, -1)}
-              className="w-10 h-10 rounded-lg bg-[#1e293b] active:bg-cyan-600 text-white flex items-center justify-center font-bold"
-            >
-              <ArrowUp className="w-4 h-4" />
-            </button>
+            <div className="flex items-center gap-1">
+              <button
+                onClick={() => handleVirtualThrust(0, 0, 1.2)}
+                className="w-8 h-8 rounded-lg bg-pink-950/80 active:bg-pink-600 text-pink-300 flex items-center justify-center font-bold text-[10px]"
+                title="Ascend +Z"
+              >
+                +Z
+              </button>
+              <button
+                onClick={() => handleVirtualThrust(0, -1, 0)}
+                className="w-9 h-9 rounded-lg bg-[#1e293b] active:bg-cyan-600 text-white flex items-center justify-center font-bold"
+              >
+                <ArrowUp className="w-4 h-4" />
+              </button>
+              <button
+                onClick={() => handleVirtualThrust(0, 0, -1.2)}
+                className="w-8 h-8 rounded-lg bg-pink-950/80 active:bg-pink-600 text-pink-300 flex items-center justify-center font-bold text-[10px]"
+                title="Descend -Z"
+              >
+                -Z
+              </button>
+            </div>
             <div className="flex gap-1">
               <button
-                onClick={() => handleVirtualThrust(-1, 0)}
-                className="w-10 h-10 rounded-lg bg-[#1e293b] active:bg-cyan-600 text-white flex items-center justify-center font-bold"
+                onClick={() => handleVirtualThrust(-1, 0, 0)}
+                className="w-9 h-9 rounded-lg bg-[#1e293b] active:bg-cyan-600 text-white flex items-center justify-center font-bold"
               >
                 <ArrowLeft className="w-4 h-4" />
               </button>
               <button
-                onClick={() => handleVirtualThrust(0, 1)}
-                className="w-10 h-10 rounded-lg bg-[#1e293b] active:bg-cyan-600 text-white flex items-center justify-center font-bold"
+                onClick={() => handleVirtualThrust(0, 1, 0)}
+                className="w-9 h-9 rounded-lg bg-[#1e293b] active:bg-cyan-600 text-white flex items-center justify-center font-bold"
               >
                 <ArrowDown className="w-4 h-4" />
               </button>
               <button
-                onClick={() => handleVirtualThrust(1, 0)}
-                className="w-10 h-10 rounded-lg bg-[#1e293b] active:bg-cyan-600 text-white flex items-center justify-center font-bold"
+                onClick={() => handleVirtualThrust(1, 0, 0)}
+                className="w-9 h-9 rounded-lg bg-[#1e293b] active:bg-cyan-600 text-white flex items-center justify-center font-bold"
               >
                 <ArrowRight className="w-4 h-4" />
               </button>
             </div>
-            <button
-              onClick={handleSlingshotDischarge}
-              className="mt-1 w-full py-1.5 bg-amber-600 active:bg-amber-500 text-white text-[10px] font-bold rounded"
-            >
-              SLING
-            </button>
+            <div className="flex gap-1 w-full mt-1">
+              <button
+                onClick={handleVirtualBrake}
+                className="flex-1 py-1 bg-rose-700 active:bg-rose-600 text-white text-[9px] font-bold rounded"
+              >
+                BRAKE
+              </button>
+              <button
+                onClick={handleSlingshotDischarge}
+                className="flex-1 py-1 bg-amber-600 active:bg-amber-500 text-white text-[9px] font-bold rounded"
+              >
+                SLING
+              </button>
+            </div>
           </div>
         </div>
 

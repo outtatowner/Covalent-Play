@@ -5,6 +5,7 @@
 
 import { SplineHull, SplineControlPoint, TetherAnchor, BoundingBox, TopologyType } from '../types';
 import { CyberArenaSynthesizer, WELL_OFFSET_Q16 } from './arena_synthesizer';
+import { VolumetricArenaSynthesizer } from './omni_axial_arena';
 
 export type { TopologyType };
 
@@ -12,28 +13,49 @@ export class ArenaForge {
   public hull: SplineHull;
   public anchors: TetherAnchor[] = [];
   public bvh: BoundingBox[] = [];
-  public topologyType: TopologyType = 'NULL_FRICTION_OCTAGON';
+  public topologyType: TopologyType = 'ISOTROPIC_HYPER_SPHERE';
   public center: { x: number; y: number } = { x: 450, y: 350 };
   public radiusX: number = 320;
   public radiusY: number = 240;
   public synthesizer: CyberArenaSynthesizer = new CyberArenaSynthesizer();
+  public volumetricSynthesizer: VolumetricArenaSynthesizer = new VolumetricArenaSynthesizer();
 
-  constructor(topology: TopologyType = 'NULL_FRICTION_OCTAGON') {
+  constructor(topology: TopologyType = 'ISOTROPIC_HYPER_SPHERE') {
     this.topologyType = topology;
-    this.hull = this.generateHull(topology);
-    this.generateAnchors();
-    this.recalculateBVH();
+    if (topology === 'ISOTROPIC_HYPER_SPHERE') {
+      this.hull = this.volumetricSynthesizer.generateHyperSphere(this.center.x, this.center.y, 0, this.radiusX * 1.1).hull;
+      this.synthesizeIsotropicHyperSphere();
+    } else {
+      this.hull = this.generateHull(topology);
+      this.generateAnchors();
+      this.recalculateBVH();
+    }
   }
 
   public setTopology(type: TopologyType): void {
     this.topologyType = type;
-    if (type === 'NULL_FRICTION_OCTAGON') {
+    if (type === 'ISOTROPIC_HYPER_SPHERE') {
+      this.synthesizeIsotropicHyperSphere();
+    } else if (type === 'NULL_FRICTION_OCTAGON') {
       this.synthesizeNullFrictionOctagon();
     } else {
       this.hull = this.generateHull(type);
       this.generateAnchors();
       this.recalculateBVH();
     }
+  }
+
+  public synthesizeIsotropicHyperSphere(): void {
+    this.topologyType = 'ISOTROPIC_HYPER_SPHERE';
+    const res = this.volumetricSynthesizer.generateHyperSphere(
+      this.center.x,
+      this.center.y,
+      0,
+      this.radiusX * 1.15
+    );
+    this.hull = res.hull;
+    this.anchors = res.anchors;
+    this.recalculateBVH();
   }
 
   public synthesizeNullFrictionOctagon(): void {
@@ -56,6 +78,11 @@ export class ArenaForge {
   }
 
   private generateHull(type: TopologyType): SplineHull {
+    if (type === 'ISOTROPIC_HYPER_SPHERE') {
+      const res = this.volumetricSynthesizer.generateHyperSphere(this.center.x, this.center.y, 0, this.radiusX * 1.15);
+      return res.hull;
+    }
+
     if (type === 'NULL_FRICTION_OCTAGON') {
       const res = this.synthesizer.generateBaselineGrid(this.center.x, this.center.y, this.radiusX);
       return res.hull;
@@ -210,31 +237,42 @@ export class ArenaForge {
       const k = this.hull.tension;
       const fx = (p.baseX - p.x) * k;
       const fy = (p.baseY - p.y) * k;
+      const fz = p.baseZ !== undefined && p.z !== undefined ? (p.baseZ - p.z) * k : 0;
 
       // Neighboring spline tension
       const prev = pts[(i - 1 + n) % n];
       const next = pts[(i + 1) % n];
       const midNeighborX = (prev.x + next.x) * 0.5;
       const midNeighborY = (prev.y + next.y) * 0.5;
+      const midNeighborZ = ((prev.z || 0) + (next.z || 0)) * 0.5;
       const smoothingK = 0.05;
       const smoothFx = (midNeighborX - p.x) * smoothingK;
       const smoothFy = (midNeighborY - p.y) * smoothingK;
+      const smoothFz = p.z !== undefined ? (midNeighborZ - p.z) * smoothingK : 0;
 
       p.vx = (p.vx + (fx + smoothFx) / p.mass) * damping;
       p.vy = (p.vy + (fy + smoothFy) / p.mass) * damping;
+      if (p.vz !== undefined) {
+        p.vz = (p.vz + (fz + smoothFz) / p.mass) * damping;
+      }
 
       p.x += p.vx;
       p.y += p.vy;
+      if (p.z !== undefined && p.vz !== undefined) {
+        p.z += p.vz;
+      }
 
       // Track strain
-      const disp = Math.hypot(p.x - p.baseX, p.y - p.baseY);
+      const disp = Math.hypot(p.x - p.baseX, p.y - p.baseY, (p.z || 0) - (p.baseZ || 0));
       p.strain = disp;
       if (disp > 2) {
         this.synthesizer.depositShear(p.x, p.y, disp * 0.02);
+        this.volumetricSynthesizer.depositVolumetricShear(p.x, p.y, p.z || 0, disp * 0.02);
       }
     }
 
     this.synthesizer.tickStrain();
+    this.volumetricSynthesizer.coolVolumetricStrain();
     this.recalculateBVH();
   }
 

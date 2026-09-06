@@ -1,6 +1,8 @@
 {
-  "name": "Covalent-FORGE: Cyber-Athletics",
+  "name": "Covalent-Play",
   "description": "Zero-latency deterministic cyber-athletics engine featuring 4D Rollback Netcode, Vector Tethering physics, and Tri-State Sparring Partner Be-Instance.",
   "requestFramePermissions": [],
-  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
 }
