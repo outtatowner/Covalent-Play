@@ -16,6 +16,8 @@ export interface FloatVector {
   y: number;
 }
 
+export type TopologyType = 'NULL_FRICTION_OCTAGON' | 'ALPHA_RING' | 'HYPER_TOROID' | 'KLEIN_LATTICE';
+
 export type BeStateMode = 'COACH' | 'COOP_PEER' | 'ADVERSARY';
 
 export interface SplineControlPoint {
@@ -28,6 +30,7 @@ export interface SplineControlPoint {
   vy: number;
   mass: number;
   isAnchor?: boolean;
+  strain?: number;
 }
 
 export interface SplineHull {
@@ -35,6 +38,8 @@ export interface SplineHull {
   points: SplineControlPoint[];
   color: string;
   tension: number;
+  material?: 'MATERIAL_TRANSLUCENT_GLASS' | 'DEFAULT';
+  refractionIndex?: number;
 }
 
 export interface BoundingBox {
@@ -44,14 +49,25 @@ export interface BoundingBox {
   maxY: number;
 }
 
+export interface LissajousParams {
+  a: number; // Frequency X
+  b: number; // Frequency Y
+  c: number; // Frequency Z
+  delta: number; // Phase shift
+  speed: number;
+  radius: number;
+}
+
 export interface TetherAnchor {
   id: string;
   x: number;
   y: number;
-  type: 'CORE' | 'SPLINE_NODE' | 'RESONANCE_ORB';
+  type: 'CORE' | 'SPLINE_NODE' | 'RESONANCE_ORB' | 'THERMODYNAMIC_WELL';
   radius: number;
   energyValue: number;
   active: boolean;
+  lissajous?: LissajousParams;
+  q16Coords?: { x: number; y: number };
 }
 
 export interface ActiveTether {

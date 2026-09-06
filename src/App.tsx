@@ -43,7 +43,7 @@ import {
 
 export default function App() {
   // Engine Singletons initialized once
-  const arena = useMemo(() => new ArenaForge('ALPHA_RING'), []);
+  const arena = useMemo(() => new ArenaForge('NULL_FRICTION_OCTAGON'), []);
   const tetherEngine = useMemo(() => new CyberAthleticTethering(arena), [arena]);
   const beEngine = useMemo(() => new BeInstanceEngine(arena, tetherEngine), [arena, tetherEngine]);
   const rollbackSieve = useMemo(() => new CovalentRollbackSieve(arena), [arena]);
@@ -73,7 +73,8 @@ export default function App() {
   const [audioEnabled, setAudioEnabled] = useState<boolean>(true);
   const [showBVH, setShowBVH] = useState<boolean>(false);
   const [showCoordinates, setShowCoordinates] = useState<boolean>(true);
-  const [selectedTopology, setSelectedTopology] = useState<TopologyType>('ALPHA_RING');
+  const [selectedTopology, setSelectedTopology] = useState<TopologyType>('NULL_FRICTION_OCTAGON');
+  const [compileFlash, setCompileFlash] = useState<boolean>(false);
 
   // Key state tracking
   const keysPressed = useRef<{ [key: string]: boolean }>({});
@@ -188,6 +189,15 @@ export default function App() {
     cyberAudio.playResonanceChime();
   };
 
+  // Dedicated Manifold Compile for Null-Friction Octagon
+  const handleManifoldCompile = () => {
+    setSelectedTopology('NULL_FRICTION_OCTAGON');
+    arena.synthesizeNullFrictionOctagon();
+    setCompileFlash(true);
+    setTimeout(() => setCompileFlash(false), 900);
+    cyberAudio.playResonanceChime();
+  };
+
   // Be-Instance Mode Switcher
   const handleBeModeChange = (mode: BeStateMode) => {
     beEngine.setMode(mode, tickRef.current);
@@ -270,9 +280,31 @@ export default function App() {
         </div>
 
         {/* Action Controls & Topologies */}
-        <div className="flex items-center gap-2 font-mono text-xs">
+        <div className="flex flex-wrap items-center gap-2 font-mono text-xs">
+          {/* Manifold Compile Action */}
+          <button
+            onClick={handleManifoldCompile}
+            title="Compile Baseline Sparring Manifold: The Null-Friction Octagon"
+            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg font-bold transition-all cursor-pointer border ${
+              compileFlash
+                ? 'bg-rose-600 border-rose-400 text-white shadow-lg shadow-rose-500/50 scale-105'
+                : 'bg-gradient-to-r from-cyan-950 via-[#0c1f33] to-[#081829] hover:from-cyan-900 hover:to-cyan-800 text-cyan-300 border-cyan-500/60 shadow-md shadow-cyan-500/20'
+            }`}
+          >
+            <Zap className={`w-3.5 h-3.5 text-cyan-400 ${compileFlash ? 'animate-spin' : ''}`} />
+            <span>MANIFOLD COMPILE</span>
+          </button>
+
           {/* Topology Selector */}
           <div className="flex bg-[#05070c] p-1 rounded-lg border border-[#1e293b]">
+            <button
+              onClick={() => handleTopologySelect('NULL_FRICTION_OCTAGON')}
+              className={`px-2.5 py-1 rounded transition-colors cursor-pointer text-[11px] ${
+                selectedTopology === 'NULL_FRICTION_OCTAGON' ? 'bg-cyan-600 text-white font-bold' : 'text-slate-400 hover:text-white'
+              }`}
+            >
+              Null-Friction Octagon
+            </button>
             <button
               onClick={() => handleTopologySelect('ALPHA_RING')}
               className={`px-2.5 py-1 rounded transition-colors cursor-pointer text-[11px] ${
@@ -346,6 +378,41 @@ export default function App() {
 
       {/* Main Workspace Body */}
       <main className="flex-1 p-4 max-w-7xl mx-auto w-full flex flex-col gap-4">
+        {/* Active Manifold Telemetry Strip */}
+        <div className="flex flex-wrap items-center justify-between gap-3 bg-[#090d16] border border-[#1e293b] rounded-xl px-4 py-2.5 text-xs font-mono shadow-md">
+          <div className="flex items-center gap-2">
+            <span className="w-2 h-2 rounded-full bg-cyan-400 animate-pulse" />
+            <span className="text-slate-300 font-bold">MANIFOLD:</span>
+            <span className="text-cyan-400 font-semibold">
+              {selectedTopology === 'NULL_FRICTION_OCTAGON' ? 'THE NULL-FRICTION OCTAGON' : selectedTopology}
+            </span>
+            <span className="text-[10px] px-1.5 py-0.5 rounded bg-cyan-950/80 text-cyan-400 border border-cyan-800/60">
+              Q16.16 BOUNDS [0x04000000]
+            </span>
+          </div>
+
+          <div className="flex flex-wrap items-center gap-4 text-slate-400 text-[11px]">
+            <div className="flex items-center gap-1.5">
+              <span className="text-slate-500">FLOOR:</span>
+              <span className="text-emerald-400">Zero-Roughness Mirror</span>
+            </div>
+            <div className="flex items-center gap-1.5">
+              <span className="text-slate-500">dV/dt STRAIN:</span>
+              <span className={`font-bold ${arena.synthesizer.maxDvDt > 0.4 ? 'text-rose-400 animate-pulse' : 'text-cyan-400'}`}>
+                {(arena.synthesizer.maxDvDt * 100).toFixed(0)}% [CYAN&rarr;CRIMSON]
+              </span>
+            </div>
+            <div className="flex items-center gap-1.5">
+              <span className="text-slate-500">ANCHORS:</span>
+              <span className="text-cyan-300">4x 3D Lissajous Curves (±0x02000000)</span>
+            </div>
+            <div className="flex items-center gap-1.5">
+              <span className="text-slate-500">HULLS:</span>
+              <span className="text-slate-200">Translucent Glass Bézier Splines</span>
+            </div>
+          </div>
+        </div>
+
         {/* Arena Viewport Container */}
         <div className="relative w-full h-[520px] rounded-xl overflow-hidden border border-[#1e293b] shadow-2xl">
           <CyberArenaCanvas

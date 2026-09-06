@@ -3,20 +3,22 @@
  * Handles dynamic geometric deformation inputs, Bézier hulls, and BVH recalculation.
  */
 
-import { SplineHull, SplineControlPoint, TetherAnchor, BoundingBox } from '../types';
+import { SplineHull, SplineControlPoint, TetherAnchor, BoundingBox, TopologyType } from '../types';
+import { CyberArenaSynthesizer, WELL_OFFSET_Q16 } from './arena_synthesizer';
 
-export type TopologyType = 'ALPHA_RING' | 'HYPER_TOROID' | 'KLEIN_LATTICE';
+export type { TopologyType };
 
 export class ArenaForge {
   public hull: SplineHull;
   public anchors: TetherAnchor[] = [];
   public bvh: BoundingBox[] = [];
-  public topologyType: TopologyType = 'ALPHA_RING';
+  public topologyType: TopologyType = 'NULL_FRICTION_OCTAGON';
   public center: { x: number; y: number } = { x: 450, y: 350 };
   public radiusX: number = 320;
   public radiusY: number = 240;
+  public synthesizer: CyberArenaSynthesizer = new CyberArenaSynthesizer();
 
-  constructor(topology: TopologyType = 'ALPHA_RING') {
+  constructor(topology: TopologyType = 'NULL_FRICTION_OCTAGON') {
     this.topologyType = topology;
     this.hull = this.generateHull(topology);
     this.generateAnchors();
@@ -25,12 +27,40 @@ export class ArenaForge {
 
   public setTopology(type: TopologyType): void {
     this.topologyType = type;
-    this.hull = this.generateHull(type);
-    this.generateAnchors();
+    if (type === 'NULL_FRICTION_OCTAGON') {
+      this.synthesizeNullFrictionOctagon();
+    } else {
+      this.hull = this.generateHull(type);
+      this.generateAnchors();
+      this.recalculateBVH();
+    }
+  }
+
+  public synthesizeNullFrictionOctagon(): void {
+    this.topologyType = 'NULL_FRICTION_OCTAGON';
+    const res = this.synthesizer.generateBaselineGrid(this.center.x, this.center.y, this.radiusX);
+    this.hull = res.hull;
+    this.anchors = [
+      {
+        id: 'core_quipu_center',
+        x: this.center.x,
+        y: this.center.y,
+        type: 'CORE',
+        radius: 20,
+        energyValue: 100,
+        active: true
+      },
+      ...res.wells
+    ];
     this.recalculateBVH();
   }
 
   private generateHull(type: TopologyType): SplineHull {
+    if (type === 'NULL_FRICTION_OCTAGON') {
+      const res = this.synthesizer.generateBaselineGrid(this.center.x, this.center.y, this.radiusX);
+      return res.hull;
+    }
+
     const points: SplineControlPoint[] = [];
     const count = type === 'HYPER_TOROID' ? 16 : type === 'KLEIN_LATTICE' ? 14 : 12;
 
@@ -63,7 +93,8 @@ export class ArenaForge {
         vx: 0,
         vy: 0,
         mass: 1.5 + (i % 3) * 0.5,
-        isAnchor: i % 3 === 0
+        isAnchor: i % 3 === 0,
+        strain: 0
       });
     }
 
@@ -71,7 +102,8 @@ export class ArenaForge {
       id: `hull_${type}`,
       points,
       color: type === 'HYPER_TOROID' ? '#00e5ff' : type === 'KLEIN_LATTICE' ? '#a855f7' : '#06b6d4',
-      tension: 0.12
+      tension: 0.12,
+      material: 'DEFAULT'
     };
   }
 
@@ -89,7 +121,15 @@ export class ArenaForge {
       active: true
     });
 
-    if (this.topologyType === 'HYPER_TOROID') {
+    if (this.topologyType === 'NULL_FRICTION_OCTAGON') {
+      const wellScale = this.radiusX * 0.45;
+      this.anchors.push(
+        this.synthesizer.sys_covalent_spawn_energy_well(WELL_OFFSET_Q16, WELL_OFFSET_Q16, this.center.x + wellScale, this.center.y + wellScale, 0),
+        this.synthesizer.sys_covalent_spawn_energy_well(-WELL_OFFSET_Q16, WELL_OFFSET_Q16, this.center.x - wellScale, this.center.y + wellScale, 1),
+        this.synthesizer.sys_covalent_spawn_energy_well(WELL_OFFSET_Q16, -WELL_OFFSET_Q16, this.center.x + wellScale, this.center.y - wellScale, 2),
+        this.synthesizer.sys_covalent_spawn_energy_well(-WELL_OFFSET_Q16, -WELL_OFFSET_Q16, this.center.x - wellScale, this.center.y - wellScale, 3)
+      );
+    } else if (this.topologyType === 'HYPER_TOROID') {
       this.anchors.push(
         { id: 'focus_left', x: this.center.x - 160, y: this.center.y, type: 'RESONANCE_ORB', radius: 14, energyValue: 40, active: true },
         { id: 'focus_right', x: this.center.x + 160, y: this.center.y, type: 'RESONANCE_ORB', radius: 14, energyValue: 40, active: true },
@@ -185,8 +225,16 @@ export class ArenaForge {
 
       p.x += p.vx;
       p.y += p.vy;
+
+      // Track strain
+      const disp = Math.hypot(p.x - p.baseX, p.y - p.baseY);
+      p.strain = disp;
+      if (disp > 2) {
+        this.synthesizer.depositShear(p.x, p.y, disp * 0.02);
+      }
     }
 
+    this.synthesizer.tickStrain();
     this.recalculateBVH();
   }
 
@@ -208,6 +256,10 @@ export class ArenaForge {
     prev.vy += (forceY * 0.35) / prev.mass;
     next.vx += (forceX * 0.35) / next.mass;
     next.vy += (forceY * 0.35) / next.mass;
+
+    // Deposit localized thermodynamic strain on the kinetic floor
+    const forceMag = Math.hypot(forceX, forceY);
+    this.synthesizer.depositShear(target.x, target.y, Math.min(1.0, forceMag * 0.08));
 
     this.recalculateBVH();
   }
