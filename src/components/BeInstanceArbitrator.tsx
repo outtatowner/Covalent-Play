@@ -113,12 +113,24 @@ export const BeInstanceArbitrator: React.FC<BeInstanceArbitratorProps> = ({
 
       {/* Adversary Threat Telemetry (if Adversary mode) */}
       {currentMode === 'ADVERSARY' && (
-        <div className="bg-[#05070c] p-2.5 rounded-lg border border-rose-900/50 flex items-center justify-between text-xs">
-          <div className="flex items-center gap-2 text-rose-300">
-            <Flame className="w-4 h-4 text-rose-400 animate-bounce" />
-            <span>Adversary Target Strategy:</span>
+        <div className="bg-[#05070c] p-2.5 rounded-lg border border-rose-900/50 flex flex-col gap-1 text-xs">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2 text-rose-300">
+              <Flame className="w-4 h-4 text-rose-400 animate-bounce" />
+              <span>Adversary Strategy:</span>
+            </div>
+            <span className="text-rose-400 font-bold">
+              {Math.abs(beEntity.w || 0) > 1.0 ? '4D PHASE PINCH // STASIS AMBUSH' : 'KINETIC PINCH & ORB STARVATION'}
+            </span>
           </div>
-          <span className="text-rose-400 font-bold">KINETIC PINCH & ORB STARVATION</span>
+
+          {/* 4D Phase Status for Be <> */}
+          <div className="flex items-center justify-between text-[10px] pt-1 border-t border-rose-950/60 font-mono">
+            <span className="text-slate-400">BE &lt;&gt; PHASE: W={(beEntity.w || 0).toFixed(1)} u</span>
+            <span className={Math.abs(beEntity.w || 0) > 1.0 ? 'text-amber-400 font-bold animate-pulse' : 'text-cyan-400'}>
+              {Math.abs(beEntity.w || 0) > 1.0 ? 'ECHO ACTIVE [PREDICT RETICLE]' : 'IN 3D SLICE'}
+            </span>
+          </div>
         </div>
       )}
 

@@ -176,6 +176,86 @@ class CyberAudioEngine {
       osc.stop(this.ctx!.currentTime + idx * 0.05 + 0.4);
     });
   }
+
+  public playPhaseShift() {
+    if (!this.enabled) return;
+    this.initCtx();
+    if (!this.ctx) return;
+
+    // Dual-oscillator hyper-dimensional warp sweep
+    const osc1 = this.ctx.createOscillator();
+    const osc2 = this.ctx.createOscillator();
+    const gain = this.ctx.createGain();
+
+    osc1.type = 'sine';
+    osc2.type = 'triangle';
+
+    osc1.frequency.setValueAtTime(320, this.ctx.currentTime);
+    osc1.frequency.exponentialRampToValueAtTime(1280, this.ctx.currentTime + 0.16);
+
+    osc2.frequency.setValueAtTime(160, this.ctx.currentTime);
+    osc2.frequency.exponentialRampToValueAtTime(640, this.ctx.currentTime + 0.16);
+
+    gain.gain.setValueAtTime(0.09, this.ctx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.001, this.ctx.currentTime + 0.2);
+
+    osc1.connect(gain);
+    osc2.connect(gain);
+    gain.connect(this.ctx.destination);
+
+    osc1.start();
+    osc2.start();
+    osc1.stop(this.ctx.currentTime + 0.2);
+    osc2.stop(this.ctx.currentTime + 0.2);
+  }
+
+  public playTesseractEcho() {
+    if (!this.enabled) return;
+    this.initCtx();
+    if (!this.ctx) return;
+
+    const osc = this.ctx.createOscillator();
+    const gain = this.ctx.createGain();
+
+    osc.type = 'sine';
+    osc.frequency.setValueAtTime(1440, this.ctx.currentTime);
+    osc.frequency.linearRampToValueAtTime(1200, this.ctx.currentTime + 0.1);
+
+    gain.gain.setValueAtTime(0.04, this.ctx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.001, this.ctx.currentTime + 0.1);
+
+    osc.connect(gain);
+    gain.connect(this.ctx.destination);
+
+    osc.start();
+    osc.stop(this.ctx.currentTime + 0.1);
+  }
+
+  public playReentryShatter() {
+    if (!this.enabled) return;
+    this.initCtx();
+    if (!this.ctx) return;
+
+    // Crystalline stasis shatter impact
+    const freqs = [1760, 1318.5, 987.7, 440];
+    freqs.forEach((f, idx) => {
+      const osc = this.ctx!.createOscillator();
+      const gain = this.ctx!.createGain();
+
+      osc.type = 'square';
+      osc.frequency.setValueAtTime(f, this.ctx!.currentTime);
+      osc.frequency.exponentialRampToValueAtTime(f * 0.4, this.ctx!.currentTime + 0.25);
+
+      gain.gain.setValueAtTime(0.12 / (idx + 1), this.ctx!.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.001, this.ctx!.currentTime + 0.28);
+
+      osc.connect(gain);
+      gain.connect(this.ctx!.destination);
+
+      osc.start();
+      osc.stop(this.ctx!.currentTime + 0.28);
+    });
+  }
 }
 
 export const cyberAudio = new CyberAudioEngine();

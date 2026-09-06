@@ -20,9 +20,14 @@ export class ArenaForge {
   public synthesizer: CyberArenaSynthesizer = new CyberArenaSynthesizer();
   public volumetricSynthesizer: VolumetricArenaSynthesizer = new VolumetricArenaSynthesizer();
 
-  constructor(topology: TopologyType = 'ISOTROPIC_HYPER_SPHERE') {
+  public tesseractRotor: [number, number, number, number, number, number] = [0, 0, 0, 0.05, 0.03, 0];
+
+  constructor(topology: TopologyType = 'THE_NULL_FRICTION_TESSERACT') {
     this.topologyType = topology;
-    if (topology === 'ISOTROPIC_HYPER_SPHERE') {
+    if (topology === 'THE_NULL_FRICTION_TESSERACT') {
+      this.hull = this.volumetricSynthesizer.generateHyperSphere(this.center.x, this.center.y, 0, this.radiusX * 1.1).hull;
+      this.synthesizeNullFrictionTesseract();
+    } else if (topology === 'ISOTROPIC_HYPER_SPHERE') {
       this.hull = this.volumetricSynthesizer.generateHyperSphere(this.center.x, this.center.y, 0, this.radiusX * 1.1).hull;
       this.synthesizeIsotropicHyperSphere();
     } else {
@@ -34,7 +39,9 @@ export class ArenaForge {
 
   public setTopology(type: TopologyType): void {
     this.topologyType = type;
-    if (type === 'ISOTROPIC_HYPER_SPHERE') {
+    if (type === 'THE_NULL_FRICTION_TESSERACT') {
+      this.synthesizeNullFrictionTesseract();
+    } else if (type === 'ISOTROPIC_HYPER_SPHERE') {
       this.synthesizeIsotropicHyperSphere();
     } else if (type === 'NULL_FRICTION_OCTAGON') {
       this.synthesizeNullFrictionOctagon();
@@ -43,6 +50,41 @@ export class ArenaForge {
       this.generateAnchors();
       this.recalculateBVH();
     }
+  }
+
+  public synthesizeNullFrictionTesseract(): void {
+    this.topologyType = 'THE_NULL_FRICTION_TESSERACT';
+    const res = this.volumetricSynthesizer.generateHyperSphere(
+      this.center.x,
+      this.center.y,
+      0,
+      this.radiusX * 1.2
+    );
+    this.hull = res.hull;
+    this.anchors = [
+      ...res.anchors,
+      {
+        id: 'anchor_hyper_w_plus',
+        x: this.center.x,
+        y: this.center.y,
+        z: 60,
+        type: 'THERMODYNAMIC_WELL',
+        radius: 18,
+        energyValue: 120,
+        active: true,
+      },
+      {
+        id: 'anchor_hyper_w_minus',
+        x: this.center.x,
+        y: this.center.y,
+        z: -60,
+        type: 'THERMODYNAMIC_WELL',
+        radius: 18,
+        energyValue: 120,
+        active: true,
+      }
+    ];
+    this.recalculateBVH();
   }
 
   public synthesizeIsotropicHyperSphere(): void {

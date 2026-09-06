@@ -22,6 +22,34 @@ export interface FloatVector3D {
   z: number;
 }
 
+export interface FloatVector4D {
+  x: number;
+  y: number;
+  z: number;
+  w: number;
+}
+
+export type Rotor6Planes = [number, number, number, number, number, number]; // [XY, YZ, ZX, XW, YW, ZW]
+
+export interface BoundingHypersphere {
+  x: number;
+  y: number;
+  z: number;
+  w: number;
+  hyperRadius: number;
+}
+
+export interface TesseractEcho {
+  entityId: string;
+  name: string;
+  pos4D: FloatVector4D;
+  apparentRadius: number;
+  phaseDistance: number;
+  rotor: Rotor6Planes;
+  predictedReentryPoint: FloatVector3D;
+  color: string;
+}
+
 export interface GravityVector3D {
   x: number; // Q16 or normalized
   y: number;
@@ -29,6 +57,7 @@ export interface GravityVector3D {
 }
 
 export type TopologyType =
+  | 'THE_NULL_FRICTION_TESSERACT'
   | 'ISOTROPIC_HYPER_SPHERE'
   | 'NULL_FRICTION_OCTAGON'
   | 'ALPHA_RING'
@@ -106,12 +135,14 @@ export interface ActiveTether {
   targetAnchorId?: string;
   targetPoint?: FloatVector;
   targetPoint3D?: FloatVector3D;
+  targetPoint4D?: FloatVector4D;
   targetSplineId?: string;
   splinePointIndex?: number;
   length: number;
   maxLength: number;
   tension: number; // 0 to 1
   siphoning: boolean;
+  isReversed?: boolean; // Inverted along XW/YW hyper-rotation
   color: string;
 }
 
@@ -121,14 +152,21 @@ export interface Entity {
   x: number;
   y: number;
   z: number;
+  w: number; // 4th Spatial Dimension (Phase / Depth)
   vx: number;
   vy: number;
   vz: number;
+  vw: number; // Phase velocity dW
   pitch: number; // 6DOF rotation (radians)
   yaw: number;
   roll: number;
+  rotor: Rotor6Planes; // 6 Planes of 4D Rotation (XY, YZ, ZX, XW, YW, ZW)
   radius: number;
   boundingRadius: number; // Q16.16 Bounding Sphere
+  hyperRadius: number; // Bounding Hypersphere radius in 4D
+  apparentRadius3D: number; // Cross-sectional radius at current W-slice
+  isPhasedOut: boolean; // True when |W - sliceW| >= hyperRadius
+  phaseBleed: number; // Thermodynamic friction bleed from W != 0
   energy: number; // 0 to 1000 Q16/normalized
   maxEnergy: number;
   stasisLockRemainingTicks: number; // 180 ticks = 3 sec penalty
@@ -137,6 +175,7 @@ export interface Entity {
   color: string;
   trail: FloatVector[];
   trail3D: FloatVector3D[];
+  trail4D?: FloatVector4D[];
   activeTether: ActiveTether | null;
   score: number;
 }
@@ -148,12 +187,17 @@ export interface RollbackFrame {
   be_vector: [number, number, number];    // [x, y, vx] in Q16
   human_pos_3d?: [number, number, number]; // [x, y, z] in Q16
   be_pos_3d?: [number, number, number];
+  human_pos_4d?: [number, number, number, number]; // [x, y, z, w] in Q16
+  be_pos_4d?: [number, number, number, number];
   human_rot_3d?: [number, number, number]; // [pitch, yaw, roll]
+  human_rotor_4d?: Rotor6Planes; // 6 planes of 4D rotation
   topology_hash: string;                  // Merkle root hash of arena hull at this tick
   human_energy: number;
   be_energy: number;
   human_stasis: number;
   be_stasis: number;
+  human_w?: number;
+  be_w?: number;
   arena_points_state: FloatVector[];
   arena_points_state_3d?: FloatVector3D[];
   parity_valid: boolean;

@@ -10,6 +10,7 @@ import { Entity, BeStateMode, FloatVector } from '../types';
 import { ArenaForge } from './arena_forge';
 import { CyberAthleticTethering } from './vector_tether';
 import { floatToQ16 } from './q16';
+import { phaseOfficiator } from './phase_officiator';
 
 export interface ArbitrationLog {
   tick: number;
@@ -37,14 +38,21 @@ export class BeInstanceEngine {
       x: arena.center.x + 120,
       y: arena.center.y - 80,
       z: 60,
+      w: 0,
       vx: 0,
       vy: 0,
       vz: 0,
+      vw: 0,
       pitch: 0,
       yaw: 0,
       roll: 0,
+      rotor: [0, 0, 0, 0, 0, 0],
       radius: 16,
       boundingRadius: 18,
+      hyperRadius: 28,
+      apparentRadius3D: 16,
+      isPhasedOut: false,
+      phaseBleed: 0,
       energy: 850,
       maxEnergy: 1000,
       stasisLockRemainingTicks: 0,
@@ -52,6 +60,7 @@ export class BeInstanceEngine {
       color: '#ec4899', // Hot neon pink/purple for Be <>
       trail: [],
       trail3D: [],
+      trail4D: [],
       activeTether: null,
       score: 0
     };
@@ -89,6 +98,9 @@ export class BeInstanceEngine {
    * Deterministic tactical AI tick for Be <>
    */
   public tickAI(human: Entity, currentTick: number): void {
+    // Organelle 0xB6: Tick 4D Hyper-Physics and thermodynamic vacuum bleed
+    phaseOfficiator.tickHyperPhysics(this.entity, human.w, currentTick);
+
     if (this.entity.isStasisLocked) {
       if (this.entity.stasisLockRemainingTicks === 179) {
         this.addLog('Arbitration alert: Be <> incurred Thermodynamic Bankruptcy penalty.', 'WARNING', currentTick);
@@ -215,15 +227,16 @@ export class BeInstanceEngine {
    * Utilizes full Z-axis for spherical flanking maneuvers, dives, and orbital slingshots.
    */
   private tickAdversaryMode(human: Entity, currentTick: number): void {
-    const is3D = this.arena.topologyType === 'ISOTROPIC_HYPER_SPHERE';
+    const is3D = this.arena.topologyType === 'ISOTROPIC_HYPER_SPHERE' || this.arena.topologyType === 'THE_NULL_FRICTION_TESSERACT';
+    const is4D = this.arena.topologyType === 'THE_NULL_FRICTION_TESSERACT';
     const activeWells = this.arena.anchors.filter(a => a.active && (a.type === 'THERMODYNAMIC_WELL' || a.type === 'RESONANCE_ORB'));
 
     let targetX = human.x;
     let targetY = human.y;
     let targetZ = human.z || 0;
 
-    // Tactical phase cycling: Dive, Flank, or Orbit
-    const tacticalPhase = Math.floor(currentTick / 90) % 3;
+    // Tactical phase cycling: Dive, Flank, Orbit, or 4D Tesseract Phase-Shift
+    const tacticalPhase = is4D ? (Math.floor(currentTick / 90) % 4) : (Math.floor(currentTick / 90) % 3);
 
     if (tacticalPhase === 0 && activeWells.length > 0 && this.entity.energy < 750) {
       // Phase 0: Orbital recharge maneuver around nearest thermodynamic well
@@ -272,6 +285,27 @@ export class BeInstanceEngine {
           };
           this.addLog('[ADVERSARY] 3D Spherical High-Z Slingshot locked!', 'WARNING', currentTick);
         }
+      }
+    } else if (tacticalPhase === 3 && is4D) {
+      // Phase 3: 4D Tesseract Phase-Shift (Step out of 3D cross section into W-space)
+      if (Math.abs(this.entity.w) < 4 && currentTick % 50 === 0) {
+        this.entity.vw = 2.4; // Inject W-vector thrust
+        this.addLog('[TESSERACT] Be <> phase-shifted to W = 0x00100000. Read Tesseract Echo to intercept!', 'WARNING', currentTick);
+      }
+
+      // Roll along XW and YW hyper-planes
+      this.entity.rotor[3] += 0.06;
+      this.entity.rotor[4] += 0.04;
+
+      // Ambush trajectory in 4D space
+      targetX = human.x + human.vx * 12;
+      targetY = human.y + human.vy * 12;
+      targetZ = (human.z || 0) + 30;
+
+      // When reaching peak phase depth, dive back down to drop 4D hypersphere onto athlete
+      if (this.entity.w > 32) {
+        this.entity.vw = -2.6;
+        this.addLog('[TESSERACT] Be <> dropping 4D Hypersphere cross-section onto 3D plane!', 'RESONANCE', currentTick);
       }
     } else {
       // Phase 2: Direct kinetic intercept & shear dive toward athlete

@@ -14,13 +14,15 @@
  */
 
 import React, { useRef, useEffect, useState, useCallback } from 'react';
-import { Entity, ActiveTether, FloatVector, FloatVector3D } from '../types';
+import { Entity, ActiveTether, FloatVector, FloatVector3D, TesseractEcho } from '../types';
 import { ArenaForge } from '../engine/arena_forge';
 import { CyberAthleticTethering } from '../engine/vector_tether';
 import { BeInstanceEngine } from '../engine/be_instance';
 import { floatToQ16 } from '../engine/q16';
 import { cyberAudio } from '../engine/audio';
-import { Orbit, Compass, Eye, Shield, Zap, Sparkles } from 'lucide-react';
+import { tesseractEngine, TesseractKinematicsEngine } from '../engine/tesseract_kinematics';
+import { phaseOfficiator } from '../engine/phase_officiator';
+import { Orbit, Compass, Eye, Shield, Zap, Sparkles, Layers, Disc } from 'lucide-react';
 
 interface CyberArenaCanvasProps {
   arena: ArenaForge;
@@ -122,6 +124,8 @@ export const CyberArenaCanvas: React.FC<CyberArenaCanvasProps> = ({
   // 3D Camera Controls State
   const [is3DMode, setIs3DMode] = useState<boolean>(true);
   const [followHuman, setFollowHuman] = useState<boolean>(false);
+  const [observerSliceW, setObserverSliceW] = useState<number>(0);
+  const activeEchoRef = useRef<TesseractEcho | null>(null);
   const cameraRef = useRef({
     yaw: 0.55,
     pitch: 0.42,
@@ -282,64 +286,124 @@ export const CyberArenaCanvas: React.FC<CyberArenaCanvasProps> = ({
           ctx.restore();
         }
 
-        // 3. Volumetric Isotropic Hyper-Sphere Bounds
-        const sphereRadius = Math.min(arena.radiusX, 220);
-        const latRings = [-0.65, -0.35, 0, 0.35, 0.65];
-        const numMeridians = 8;
+        // 3. Volumetric Manifold Bounds: NULL-FRICTION TESSERACT (4D) or HYPER-SPHERE (3D)
+        if (arena.topologyType === 'THE_NULL_FRICTION_TESSERACT') {
+          // Organelle 0xB5: Project 4D Tesseract to 3D via 4D Perspective Division
+          arena.tesseractRotor[3] = (arena.tesseractRotor[3] + 0.003) % (Math.PI * 2); // XW plane
+          arena.tesseractRotor[4] = (arena.tesseractRotor[4] + 0.002) % (Math.PI * 2); // YW plane
+          arena.tesseractRotor[0] = (arena.tesseractRotor[0] + 0.001) % (Math.PI * 2); // XY plane
 
-        ctx.save();
-        // Latitude rings in 3D
-        for (const lat of latRings) {
-          const ringZ = Math.sin(lat * Math.PI) * sphereRadius;
-          const ringRad = Math.cos(lat * Math.PI) * sphereRadius;
-          const segments = 48;
-          ctx.beginPath();
-          let started = false;
-          for (let s = 0; s <= segments; s++) {
-            const theta = (s / segments) * Math.PI * 2;
-            const px = arena.center.x + Math.cos(theta) * ringRad;
-            const py = arena.center.y + Math.sin(theta) * ringRad;
-            const p = proj(px, py, ringZ);
-            if (p.visible) {
-              if (!started) {
-                ctx.moveTo(p.sx, p.sy);
-                started = true;
-              } else {
-                ctx.lineTo(p.sx, p.sy);
+          const tesseractScale = Math.min(arena.radiusX, 220);
+          const projected4D = tesseractEngine.getTesseractProjectedVertices(
+            tesseractScale,
+            arena.tesseractRotor,
+            observerSliceW
+          );
+
+          ctx.save();
+          // Draw the 32 edges connecting the 16 hyper-nodes of the 4D Hypercube
+          for (let e = 0; e < TesseractKinematicsEngine.TESSERACT_EDGES.length; e++) {
+            const [v1, v2] = TesseractKinematicsEngine.TESSERACT_EDGES[e];
+            const p1_4d = projected4D[v1];
+            const p2_4d = projected4D[v2];
+
+            const s1 = proj(arena.center.x + p1_4d.p3.x, arena.center.y + p1_4d.p3.y, p1_4d.p3.z);
+            const s2 = proj(arena.center.x + p2_4d.p3.x, arena.center.y + p2_4d.p3.y, p2_4d.p3.z);
+
+            if (s1.visible && s2.visible) {
+              const avgW = (p1_4d.p4.w + p2_4d.p4.w) * 0.5;
+              const wDiff = Math.abs(avgW - observerSliceW);
+              const alpha = Math.max(0.12, Math.min(0.9, 1 - wDiff / (tesseractScale * 1.5)));
+
+              // Hypercube edges shift between cyan (in-phase) to fuchsia (hyper-plane phase)
+              ctx.strokeStyle = wDiff < 30 ? `rgba(0, 240, 255, ${alpha})` : `rgba(217, 70, 239, ${alpha})`;
+              ctx.lineWidth = wDiff < 30 ? 1.6 : 0.9;
+              ctx.beginPath();
+              ctx.moveTo(s1.sx, s1.sy);
+              ctx.lineTo(s2.sx, s2.sy);
+              ctx.stroke();
+            }
+          }
+
+          // Draw the 16 4D Hyper-Vertices
+          for (let i = 0; i < projected4D.length; i++) {
+            const vert = projected4D[i];
+            const sp = proj(arena.center.x + vert.p3.x, arena.center.y + vert.p3.y, vert.p3.z);
+            if (sp.visible) {
+              const wDiff = Math.abs(vert.p4.w - observerSliceW);
+              ctx.fillStyle = wDiff < 25 ? '#00f0ff' : '#ec4899';
+              ctx.beginPath();
+              ctx.arc(sp.sx, sp.sy, Math.max(2, 3.8 * sp.scale * vert.wScale), 0, Math.PI * 2);
+              ctx.fill();
+
+              if (showCoordinates && sp.scale > 0.8) {
+                ctx.fillStyle = 'rgba(255, 255, 255, 0.4)';
+                ctx.font = '8px monospace';
+                ctx.fillText(`v${i}[w:${Math.round(vert.p4.w)}]`, sp.sx + 5, sp.sy - 3);
               }
             }
           }
-          ctx.strokeStyle = lat === 0 ? 'rgba(0, 240, 255, 0.35)' : 'rgba(14, 116, 144, 0.22)';
-          ctx.lineWidth = lat === 0 ? 1.5 : 0.8;
-          ctx.stroke();
-        }
+          ctx.restore();
+        } else {
+          // 3. Volumetric Isotropic Hyper-Sphere Bounds
+          const sphereRadius = Math.min(arena.radiusX, 220);
+          const latRings = [-0.65, -0.35, 0, 0.35, 0.65];
+          const numMeridians = 8;
 
-        // Longitude meridians in 3D
-        for (let m = 0; m < numMeridians; m++) {
-          const mAngle = (m / numMeridians) * Math.PI;
-          const segments = 36;
-          ctx.beginPath();
-          let started = false;
-          for (let s = 0; s <= segments; s++) {
-            const phi = (s / segments) * Math.PI * 2;
-            const px = arena.center.x + Math.sin(phi) * Math.cos(mAngle) * sphereRadius;
-            const py = arena.center.y + Math.sin(phi) * Math.sin(mAngle) * sphereRadius;
-            const pz = Math.cos(phi) * sphereRadius;
-            const p = proj(px, py, pz);
-            if (p.visible) {
-              if (!started) {
-                ctx.moveTo(p.sx, p.sy);
-                started = true;
-              } else {
-                ctx.lineTo(p.sx, p.sy);
+          ctx.save();
+          // Latitude rings in 3D
+          for (const lat of latRings) {
+            const ringZ = Math.sin(lat * Math.PI) * sphereRadius;
+            const ringRad = Math.cos(lat * Math.PI) * sphereRadius;
+            const segments = 48;
+            ctx.beginPath();
+            let started = false;
+            for (let s = 0; s <= segments; s++) {
+              const theta = (s / segments) * Math.PI * 2;
+              const px = arena.center.x + Math.cos(theta) * ringRad;
+              const py = arena.center.y + Math.sin(theta) * ringRad;
+              const p = proj(px, py, ringZ);
+              if (p.visible) {
+                if (!started) {
+                  ctx.moveTo(p.sx, p.sy);
+                  started = true;
+                } else {
+                  ctx.lineTo(p.sx, p.sy);
+                }
               }
             }
+            ctx.strokeStyle = lat === 0 ? 'rgba(0, 240, 255, 0.35)' : 'rgba(14, 116, 144, 0.22)';
+            ctx.lineWidth = lat === 0 ? 1.5 : 0.8;
+            ctx.stroke();
           }
-          ctx.strokeStyle = 'rgba(2, 132, 199, 0.18)';
-          ctx.lineWidth = 0.8;
-          ctx.stroke();
+
+          // Longitude meridians in 3D
+          for (let m = 0; m < numMeridians; m++) {
+            const mAngle = (m / numMeridians) * Math.PI;
+            const segments = 36;
+            ctx.beginPath();
+            let started = false;
+            for (let s = 0; s <= segments; s++) {
+              const phi = (s / segments) * Math.PI * 2;
+              const px = arena.center.x + Math.sin(phi) * Math.cos(mAngle) * sphereRadius;
+              const py = arena.center.y + Math.sin(phi) * Math.sin(mAngle) * sphereRadius;
+              const pz = Math.cos(phi) * sphereRadius;
+              const p = proj(px, py, pz);
+              if (p.visible) {
+                if (!started) {
+                  ctx.moveTo(p.sx, p.sy);
+                  started = true;
+                } else {
+                  ctx.lineTo(p.sx, p.sy);
+                }
+              }
+            }
+            ctx.strokeStyle = 'rgba(2, 132, 199, 0.18)';
+            ctx.lineWidth = 0.8;
+            ctx.stroke();
+          }
+          ctx.restore();
         }
-        ctx.restore();
 
         // 4. Spline Hull Points Projected in 3D
         const hullPoints = arena.hull.points;
@@ -524,12 +588,95 @@ export const CyberArenaCanvas: React.FC<CyberArenaCanvasProps> = ({
         if (human.activeTether) render3DTether(human, human.activeTether);
         if (beEngine.entity.activeTether) render3DTether(beEngine.entity, beEngine.entity.activeTether);
 
-        // 7. Render 6DOF Entities with Bounding Spheres & Gimbal Rings
+        // 7. Render 6DOF Entities with 4D Cross-Sectional Projection & Tesseract Echoes
         const render6DOFEntity = (ent: Entity) => {
           const ep = proj(ent.x, ent.y, ent.z || 0);
           if (!ep.visible) return;
 
-          const baseRadius = (ent.boundingRadius || ent.radius || 18) * ep.scale;
+          // Organelle 0xB5: 4D Cross-Sectional slice projection: r_3D^2 = r_4D^2 - (w - observerSliceW)^2
+          const cross = tesseractEngine.calculateCrossSectionRadius(
+            ent.w || 0,
+            observerSliceW,
+            ent.hyperRadius || (ent.boundingRadius || ent.radius || 18) * 1.5
+          );
+
+          // If entity has stepped out of this 3D reality slice:
+          if (cross.isPhasedOut) {
+            // Render Organelle 0xB6: Tesseract Echo (Faint Wireframe Projection)
+            const echo = phaseOfficiator.generateEcho(ent, observerSliceW);
+            if (echo) {
+              if (ent.id === beEngine.entity.id) {
+                activeEchoRef.current = echo;
+              }
+
+              ctx.save();
+              const pulse = 0.5 + 0.5 * Math.sin(currentTick * 0.18);
+              const ghostRad = (ent.radius * 1.4) * ep.scale;
+
+              ctx.strokeStyle = ent.id === beEngine.entity.id ? 'rgba(236, 72, 153, 0.45)' : 'rgba(0, 240, 255, 0.45)';
+              ctx.lineWidth = 1.4;
+              ctx.setLineDash([4, 4]);
+
+              // Concentric 4D phase ghost rings
+              ctx.beginPath();
+              ctx.arc(ep.sx, ep.sy, ghostRad, 0, Math.PI * 2);
+              ctx.stroke();
+
+              ctx.beginPath();
+              ctx.arc(ep.sx, ep.sy, ghostRad * (0.6 + 0.3 * pulse), 0, Math.PI * 2);
+              ctx.stroke();
+              ctx.setLineDash([]);
+
+              // 4D Echo Status Label
+              ctx.fillStyle = ent.color;
+              ctx.font = '9px monospace';
+              ctx.textAlign = 'center';
+              ctx.fillText(`[TESSERACT ECHO: W=${(ent.w || 0).toFixed(1)}]`, ep.sx, ep.sy - ghostRad - 12);
+              ctx.fillText(`PHASE VACUUM BLEED: ${(ent.phaseBleed || 0).toFixed(2)}J/t`, ep.sx, ep.sy - ghostRad - 2);
+
+              // Draw forecast vector to PREDICTED RE-ENTRY POINT
+              const rp = proj(echo.predictedReentryPoint.x, echo.predictedReentryPoint.y, echo.predictedReentryPoint.z);
+              if (rp.visible) {
+                ctx.strokeStyle = 'rgba(251, 191, 36, 0.85)'; // Amber forecast vector
+                ctx.lineWidth = 1.8;
+                ctx.setLineDash([3, 3]);
+                ctx.beginPath();
+                ctx.moveTo(ep.sx, ep.sy);
+                ctx.lineTo(rp.sx, rp.sy);
+                ctx.stroke();
+                ctx.setLineDash([]);
+
+                // Holographic Re-entry Target Reticle
+                const reticleRad = 16 * rp.scale;
+                ctx.strokeStyle = '#fbbf24';
+                ctx.lineWidth = 2;
+                ctx.beginPath();
+                ctx.arc(rp.sx, rp.sy, reticleRad, 0, Math.PI * 2);
+                ctx.stroke();
+
+                // Target crosshair
+                ctx.beginPath();
+                ctx.moveTo(rp.sx - reticleRad - 4, rp.sy);
+                ctx.lineTo(rp.sx + reticleRad + 4, rp.sy);
+                ctx.moveTo(rp.sx, rp.sy - reticleRad - 4);
+                ctx.lineTo(rp.sx, rp.sy + reticleRad + 4);
+                ctx.stroke();
+
+                ctx.fillStyle = '#fbbf24';
+                ctx.font = '9px monospace';
+                ctx.fillText(`PREDICTED 3D RE-ENTRY`, rp.sx, rp.sy + reticleRad + 12);
+                ctx.fillStyle = '#ffffff';
+                ctx.fillText(`[CLICK TARGET TO SHATTER STASIS]`, rp.sx, rp.sy + reticleRad + 22);
+              }
+
+              ctx.restore();
+            }
+            return;
+          }
+
+          // Entity is in 3D cross-sectional slice!
+          // Apparent radius scales dynamically with slice intersection
+          const baseRadius = Math.max(3, cross.apparentRadius * ep.scale);
 
           ctx.save();
 
@@ -909,6 +1056,43 @@ export const CyberArenaCanvas: React.FC<CyberArenaCanvasProps> = ({
       return;
     }
 
+    // 1. Check if clicked near active Tesseract Echo predicted re-entry point
+    if (activeEchoRef.current) {
+      const echo = activeEchoRef.current;
+      const cam = cameraRef.current;
+      const targetX = followHuman ? human.x : arena.center.x;
+      const targetY = followHuman ? human.y : arena.center.y;
+      const targetZ = followHuman ? (human.z || 0) : 0;
+      const width = canvas.width / (window.devicePixelRatio || 1);
+      const height = canvas.height / (window.devicePixelRatio || 1);
+
+      const rp = project3D(
+        echo.predictedReentryPoint.x,
+        echo.predictedReentryPoint.y,
+        echo.predictedReentryPoint.z,
+        targetX, targetY, targetZ,
+        cam.yaw, cam.pitch, cam.dist, cam.fov,
+        width, height
+      );
+
+      if (rp.visible) {
+        const dClick = Math.hypot(x - rp.sx, y - rp.sy);
+        if (dClick < 32) {
+          // SHATTER THERMODYNAMIC STASIS!
+          cyberAudio.playReentryShatter();
+          beEngine.entity.w = 0;
+          beEngine.entity.vw = 0;
+          beEngine.entity.isStasisLocked = true;
+          beEngine.entity.stasisLockRemainingTicks = 120;
+          human.score += 250;
+          beEngine.addLog('CRITICAL PARITY INTERCEPT: Athlete shattered Be <> 4D Re-Entry stasis!', 'RULING', currentTick);
+          activeEchoRef.current = null;
+          onShearApplied();
+          return;
+        }
+      }
+    }
+
     // Check if clicked an anchor node (Thermodynamic Well) in 3D projection or 2D
     const cam = cameraRef.current;
     const targetX = followHuman ? human.x : arena.center.x;
@@ -1005,7 +1189,7 @@ export const CyberArenaCanvas: React.FC<CyberArenaCanvasProps> = ({
           title="Toggle 3D Perspective Volumetric View"
         >
           <Orbit className="w-3.5 h-3.5" />
-          <span>3D 6DOF</span>
+          <span>3D/4D 6DOF</span>
         </button>
 
         <button
@@ -1013,11 +1197,43 @@ export const CyberArenaCanvas: React.FC<CyberArenaCanvasProps> = ({
           className={`flex items-center gap-1.5 px-2 py-1 rounded transition-colors cursor-pointer ${
             followHuman ? 'bg-indigo-600 text-white font-bold' : 'text-slate-400 hover:text-white'
           }`}
-          title="Follow Athlete with 3D Camera"
+          title="Follow Athlete with Camera"
         >
           <Eye className="w-3.5 h-3.5" />
           <span>CAM FOLLOW</span>
         </button>
+
+        {/* 4D Observer W-Slice Stepper */}
+        <div className="flex items-center gap-1 border-l border-slate-700 pl-2 ml-1">
+          <Layers className="w-3.5 h-3.5 text-fuchsia-400" />
+          <span className="text-[10px] text-slate-400">W-SLICE:</span>
+          <button
+            onClick={() => setObserverSliceW(prev => Math.max(-80, prev - 10))}
+            className="px-1 py-0.5 bg-slate-800 hover:bg-slate-700 text-cyan-300 rounded text-[10px] cursor-pointer"
+            title="Step backward along W-axis (Phase slice)"
+          >
+            -10
+          </button>
+          <span className="text-[10px] text-fuchsia-300 font-bold px-1 min-w-[32px] text-center">
+            {observerSliceW}
+          </span>
+          <button
+            onClick={() => setObserverSliceW(prev => Math.min(80, prev + 10))}
+            className="px-1 py-0.5 bg-slate-800 hover:bg-slate-700 text-cyan-300 rounded text-[10px] cursor-pointer"
+            title="Step forward along W-axis (Phase slice)"
+          >
+            +10
+          </button>
+          {observerSliceW !== 0 && (
+            <button
+              onClick={() => setObserverSliceW(0)}
+              className="px-1 py-0.5 bg-cyan-950 border border-cyan-800 text-cyan-400 rounded text-[9px] cursor-pointer"
+              title="Reset to reality plane (W = 0)"
+            >
+              W=0
+            </button>
+          )}
+        </div>
 
         <button
           onClick={() => {
@@ -1034,18 +1250,26 @@ export const CyberArenaCanvas: React.FC<CyberArenaCanvasProps> = ({
 
       {/* Top-Right Invariant Status */}
       <div className="absolute top-3 right-3 flex items-center gap-2 bg-[#090d16]/90 backdrop-blur-md px-3 py-1.5 rounded-lg border border-[#1e293b] text-[11px] text-slate-300 font-mono pointer-events-none z-20">
-        <span className="inline-block w-2 h-2 rounded-full bg-cyan-400 animate-pulse" />
-        <span>{arena.topologyType === 'ISOTROPIC_HYPER_SPHERE' ? 'ISOTROPIC HYPER-SPHERE // 6DOF' : 'NULL-FRICTION OCTAGON // 1 === 1'}</span>
+        <span className={`inline-block w-2 h-2 rounded-full animate-pulse ${
+          arena.topologyType === 'THE_NULL_FRICTION_TESSERACT' ? 'bg-fuchsia-400' : 'bg-cyan-400'
+        }`} />
+        <span>
+          {arena.topologyType === 'THE_NULL_FRICTION_TESSERACT'
+            ? 'NULL-FRICTION TESSERACT // 4D HYPER-VOLUME'
+            : arena.topologyType === 'ISOTROPIC_HYPER_SPHERE'
+            ? 'ISOTROPIC HYPER-SPHERE // 6DOF'
+            : 'NULL-FRICTION OCTAGON // 1 === 1'}
+        </span>
       </div>
 
       {/* Bottom Instructions / Keyboard Hints */}
       <div className="absolute bottom-3 left-3 bg-[#090d16]/90 backdrop-blur-md px-3 py-2 rounded-lg border border-[#1e293b] text-[11px] text-slate-400 font-mono pointer-events-none flex flex-wrap items-center gap-3 z-20">
         <span><strong className="text-cyan-400">WASD:</strong> 3D Thrust</span>
         <span><strong className="text-pink-400">SPACE / C:</strong> Altitude (±Z)</span>
+        <span><strong className="text-fuchsia-400">[ / ]:</strong> Phase Shift (±W)</span>
         <span><strong className="text-amber-400">Q / E:</strong> Roll 6DOF</span>
         <span><strong className="text-rose-400">SHIFT / B:</strong> Thermodynamic Brake</span>
-        <span><strong className="text-slate-300">DRAG:</strong> Orbit 3D</span>
-        <span><strong className="text-emerald-400">CLICK WELL:</strong> Slingshot</span>
+        <span><strong className="text-yellow-400">CLICK RETICLE:</strong> Shatter Stasis</span>
       </div>
     </div>
   );

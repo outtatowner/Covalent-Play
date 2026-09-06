@@ -17,6 +17,7 @@ import { BeInstanceEngine } from './engine/be_instance';
 import { CovalentRollbackSieve } from './engine/rollback_kernel';
 import { floatToQ16, computeTopologyHash } from './engine/q16';
 import { cyberAudio } from './engine/audio';
+import { phaseOfficiator } from './engine/phase_officiator';
 
 import { CyberArenaCanvas } from './components/CyberArenaCanvas';
 import { RollbackSieveInspector } from './components/RollbackSieveInspector';
@@ -40,7 +41,8 @@ import {
   ArrowRight,
   Maximize2,
   Orbit,
-  Shield
+  Shield,
+  Disc
 } from 'lucide-react';
 
 export default function App() {
@@ -57,12 +59,18 @@ export default function App() {
     x: 330,
     y: 350,
     z: 0,
+    w: 0,
     vx: 0,
     vy: 0,
     vz: 0,
+    vw: 0,
     pitch: 0,
     yaw: 0,
     roll: 0,
+    rotor: [0, 0, 0, 0, 0, 0],
+    hyperRadius: 32,
+    apparentRadius3D: 18,
+    phaseBleed: 0,
     radius: 16,
     boundingRadius: 18,
     energy: 800,
@@ -147,10 +155,11 @@ export default function App() {
           human.isBraking = false;
         }
 
-        // 2. Apply Human 6DOF Input Thrust
+        // 2. Apply Human 6DOF & 4D Input Thrust
         if (!human.isStasisLocked && !human.isBraking) {
           const thrust = 0.42;
-          const is3D = arena.topologyType === 'ISOTROPIC_HYPER_SPHERE';
+          const is3D = arena.topologyType === 'ISOTROPIC_HYPER_SPHERE' || arena.topologyType === 'THE_NULL_FRICTION_TESSERACT';
+          const isTesseract = arena.topologyType === 'THE_NULL_FRICTION_TESSERACT';
 
           // Planar XY Thrust
           if (keysPressed.current['w'] || keysPressed.current['arrowup']) human.vy -= thrust;
@@ -168,6 +177,25 @@ export default function App() {
           if (keysPressed.current['q']) human.roll -= 0.05;
           if (keysPressed.current['e']) human.roll += 0.05;
 
+          // 4D Phase Shift Traversal ([ / ] or 1 / 2 or U / I)
+          if (isTesseract) {
+            if (keysPressed.current['['] || keysPressed.current['1'] || keysPressed.current['u']) {
+              phaseOfficiator.applyPhaseShift(human, -0.6);
+              if (t % 18 === 0) cyberAudio.playPhaseShift();
+            }
+            if (keysPressed.current[']'] || keysPressed.current['2'] || keysPressed.current['i']) {
+              phaseOfficiator.applyPhaseShift(human, 0.6);
+              if (t % 18 === 0) cyberAudio.playPhaseShift();
+            }
+            // 4D Hyper-Rotations along XW / YW planes
+            if (keysPressed.current['x']) {
+              phaseOfficiator.applyHyperRotation(human, 3, 0.035);
+            }
+            if (keysPressed.current['y']) {
+              phaseOfficiator.applyHyperRotation(human, 4, 0.035);
+            }
+          }
+
           // Compute 6DOF Attitude without gimbal lock
           const horizSpeed = Math.hypot(human.vx, human.vy);
           if (horizSpeed > 0.1) {
@@ -182,6 +210,13 @@ export default function App() {
         tetherEngine.tickEntity(human);
         tetherEngine.tickEntity(beEngine.entity);
 
+        // Organelle 0xB6: Tick 4D Hyper-Physics & W-Axis Thermodynamic Vacuum Bleed
+        const isTesseractArena = arena.topologyType === 'THE_NULL_FRICTION_TESSERACT';
+        if (isTesseractArena) {
+          phaseOfficiator.tickHyperPhysics(human, 0, t);
+          phaseOfficiator.tickHyperPhysics(beEngine.entity, human.w || 0, t);
+        }
+
         // 4. Tick Be <> Autonomous Arbitrator
         beEngine.tickAI(human, t);
 
@@ -189,7 +224,7 @@ export default function App() {
         arena.tickHullPhysics();
 
         // 6. Quipu Core & 3D Thermodynamic Well Absorption / Scoring
-        const isHyperSphere = arena.topologyType === 'ISOTROPIC_HYPER_SPHERE';
+        const isHyperSphere = arena.topologyType === 'ISOTROPIC_HYPER_SPHERE' || isTesseractArena;
         for (const a of arena.anchors) {
           if (!a.active) continue;
 
@@ -255,6 +290,41 @@ export default function App() {
     setCompileFlash(true);
     setTimeout(() => setCompileFlash(false), 900);
     cyberAudio.playResonanceChime();
+  };
+
+  // Dedicated 4D Tesseract Expansion (Phase-Shifting & Hyper-Rotations)
+  const handleTesseractExpansion = () => {
+    setSelectedTopology('THE_NULL_FRICTION_TESSERACT');
+    arena.rebuildTopology('THE_NULL_FRICTION_TESSERACT');
+    human.w = 0;
+    human.vw = 0;
+    human.hyperRadius = 32;
+    human.rotor = [0, 0, 0, 0, 0, 0];
+    beEngine.entity.w = 0;
+    beEngine.entity.vw = 0;
+    beEngine.entity.hyperRadius = 32;
+    beEngine.entity.rotor = [0, 0, 0, 0, 0, 0];
+    cyberAudio.playPhaseShift();
+    beEngine.addLog('MANIFOLD COMPILE: THE NULL-FRICTION TESSERACT // 4D W-Axis Phase Traversal Active (W=0x00000000)', 'SYS', tickRef.current);
+    setCompileFlash(true);
+    setTimeout(() => setCompileFlash(false), 900);
+  };
+
+  // 4D Phase Shift and Hyper-Rotation Actions
+  const handlePhaseShift = (deltaW: number) => {
+    phaseOfficiator.applyPhaseShift(human, deltaW);
+    cyberAudio.playPhaseShift();
+  };
+
+  const handleResetPhase = () => {
+    human.w = 0;
+    human.vw = 0;
+    cyberAudio.playResonanceChime();
+  };
+
+  const handleHyperRotate = (planeIdx: number, angle: number) => {
+    phaseOfficiator.applyHyperRotation(human, planeIdx, angle);
+    cyberAudio.playKineticShear();
   };
 
   // Be-Instance Mode Switcher
@@ -353,6 +423,20 @@ export default function App() {
 
         {/* Action Controls & Topologies */}
         <div className="flex flex-wrap items-center gap-2 font-mono text-xs">
+          {/* 4D Tesseract Expansion Action */}
+          <button
+            onClick={handleTesseractExpansion}
+            title="Shatter 3D Limits: Compile 4D Null-Friction Tesseract (W-Axis Phase Traversal)"
+            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg font-bold transition-all cursor-pointer border ${
+              selectedTopology === 'THE_NULL_FRICTION_TESSERACT'
+                ? 'bg-gradient-to-r from-fuchsia-600 via-purple-600 to-cyan-500 text-white border-fuchsia-300 shadow-lg shadow-fuchsia-500/40 scale-105 ring-1 ring-fuchsia-400'
+                : 'bg-gradient-to-r from-[#1c0d2e] to-[#25103a] hover:from-purple-900 hover:to-fuchsia-900 text-fuchsia-300 border-fuchsia-500/60 shadow-md'
+            }`}
+          >
+            <Disc className="w-3.5 h-3.5 text-fuchsia-400 animate-spin" />
+            <span>4D TESSERACT EXPANSION</span>
+          </button>
+
           {/* Volumetric 3D Expansion Action */}
           <button
             onClick={handleVolumetricExpansion}
@@ -383,6 +467,14 @@ export default function App() {
 
           {/* Topology Selector */}
           <div className="flex bg-[#05070c] p-1 rounded-lg border border-[#1e293b]">
+            <button
+              onClick={() => handleTopologySelect('THE_NULL_FRICTION_TESSERACT')}
+              className={`px-2.5 py-1 rounded transition-colors cursor-pointer text-[11px] ${
+                selectedTopology === 'THE_NULL_FRICTION_TESSERACT' ? 'bg-fuchsia-600 text-white font-bold' : 'text-slate-400 hover:text-white'
+              }`}
+            >
+              Tesseract (4D)
+            </button>
             <button
               onClick={() => handleTopologySelect('ISOTROPIC_HYPER_SPHERE')}
               className={`px-2.5 py-1 rounded transition-colors cursor-pointer text-[11px] ${
@@ -475,21 +567,35 @@ export default function App() {
         {/* Active Manifold Telemetry Strip */}
         <div className="flex flex-wrap items-center justify-between gap-3 bg-[#090d16] border border-[#1e293b] rounded-xl px-4 py-2.5 text-xs font-mono shadow-md">
           <div className="flex items-center gap-2">
-            <span className="w-2 h-2 rounded-full bg-cyan-400 animate-pulse" />
+            <span className={`w-2 h-2 rounded-full animate-pulse ${
+              selectedTopology === 'THE_NULL_FRICTION_TESSERACT' ? 'bg-fuchsia-400' : 'bg-cyan-400'
+            }`} />
             <span className="text-slate-300 font-bold">MANIFOLD:</span>
-            <span className="text-cyan-400 font-semibold">
-              {selectedTopology === 'ISOTROPIC_HYPER_SPHERE' ? 'ISOTROPIC HYPER-SPHERE (6DOF 3D)' : selectedTopology}
+            <span className={selectedTopology === 'THE_NULL_FRICTION_TESSERACT' ? 'text-fuchsia-400 font-semibold' : 'text-cyan-400 font-semibold'}>
+              {selectedTopology === 'THE_NULL_FRICTION_TESSERACT'
+                ? 'THE NULL-FRICTION TESSERACT (4D HYPER-VOLUME)'
+                : selectedTopology === 'ISOTROPIC_HYPER_SPHERE'
+                ? 'ISOTROPIC HYPER-SPHERE (6DOF 3D)'
+                : selectedTopology}
             </span>
-            <span className="text-[10px] px-1.5 py-0.5 rounded bg-cyan-950/80 text-cyan-400 border border-cyan-800/60">
-              {selectedTopology === 'ISOTROPIC_HYPER_SPHERE' ? 'Q16.16 BOUNDING SPHERE [r=128u]' : 'Q16.16 BOUNDS [0x04000000]'}
+            <span className={`text-[10px] px-1.5 py-0.5 rounded border ${
+              selectedTopology === 'THE_NULL_FRICTION_TESSERACT'
+                ? 'bg-fuchsia-950/80 text-fuchsia-300 border-fuchsia-800/60'
+                : 'bg-cyan-950/80 text-cyan-400 border-cyan-800/60'
+            }`}>
+              {selectedTopology === 'THE_NULL_FRICTION_TESSERACT'
+                ? '16 HYPER-VERTICES // 32 EDGES'
+                : selectedTopology === 'ISOTROPIC_HYPER_SPHERE'
+                ? 'Q16.16 BOUNDING SPHERE [r=128u]'
+                : 'Q16.16 BOUNDS [0x04000000]'}
             </span>
           </div>
 
           <div className="flex flex-wrap items-center gap-4 text-slate-400 text-[11px]">
             <div className="flex items-center gap-1.5">
-              <span className="text-slate-500">GRAVITY FIELD:</span>
-              <span className="text-emerald-400">
-                {selectedTopology === 'ISOTROPIC_HYPER_SPHERE' ? '[0, 0, 0] Zero-G Isotropic' : 'Ground-Locked 2.5D'}
+              <span className="text-slate-500">4D PHASE DEPTH (W):</span>
+              <span className={Math.abs(human.w || 0) > 1 ? 'text-fuchsia-400 font-bold' : 'text-emerald-400'}>
+                {selectedTopology === 'THE_NULL_FRICTION_TESSERACT' ? `W=${(human.w || 0).toFixed(2)} [Phase Vacuum]` : 'W=0 (Locked)'}
               </span>
             </div>
             <div className="flex items-center gap-1.5">
@@ -499,17 +605,68 @@ export default function App() {
               </span>
             </div>
             <div className="flex items-center gap-1.5">
-              <span className="text-slate-500">ANCHORS:</span>
+              <span className="text-slate-500">WELLS:</span>
               <span className="text-cyan-300">
-                {selectedTopology === 'ISOTROPIC_HYPER_SPHERE' ? '4x Tetrahedral 3D Lissajous Wells' : '4x 3D Lissajous Curves'}
+                {selectedTopology === 'THE_NULL_FRICTION_TESSERACT' ? '6x 4D Orthogonal Thermodynamic Wells' : '4x 3D Lissajous Curves'}
               </span>
             </div>
             <div className="flex items-center gap-1.5">
               <span className="text-slate-500">KINEMATICS:</span>
               <span className="text-slate-200">
-                {selectedTopology === 'ISOTROPIC_HYPER_SPHERE' ? '6DOF CORDIC Pitch/Yaw/Roll' : 'Translucent Glass Bézier Splines'}
+                {selectedTopology === 'THE_NULL_FRICTION_TESSERACT' ? '6-Plane 4D CORDIC Rotors (XY,YZ,ZX,XW,YW,ZW)' : '6DOF CORDIC Pitch/Yaw/Roll'}
               </span>
             </div>
+          </div>
+        </div>
+
+        {/* 4D Hyper-Kinematics Quick-Action Bar */}
+        <div className="flex flex-wrap items-center justify-between gap-2 bg-[#060913] border border-fuchsia-900/40 rounded-xl px-4 py-2 font-mono text-xs shadow-lg">
+          <div className="flex items-center gap-2">
+            <span className="text-fuchsia-400 font-bold flex items-center gap-1">
+              <Disc className="w-3.5 h-3.5 text-fuchsia-400" />
+              <span>4D PHASE CONTROLS:</span>
+            </span>
+            <span className="text-slate-400 text-[11px] hidden md:inline">
+              Step across the W-axis or hyper-rotate through XW / YW planes:
+            </span>
+          </div>
+
+          <div className="flex flex-wrap items-center gap-1.5">
+            <button
+              onClick={() => handlePhaseShift(-12)}
+              className="px-2.5 py-1 rounded bg-[#1c0d2e] hover:bg-purple-900 border border-purple-700/60 text-fuchsia-300 text-[11px] font-bold transition-all cursor-pointer"
+              title="Dive backward along W-axis (step out of 3D slice)"
+            >
+              [-12u PHASE DIVE]
+            </button>
+            <button
+              onClick={() => handlePhaseShift(12)}
+              className="px-2.5 py-1 rounded bg-[#1c0d2e] hover:bg-purple-900 border border-purple-700/60 text-fuchsia-300 text-[11px] font-bold transition-all cursor-pointer"
+              title="Ascend forward along W-axis (step out of 3D slice)"
+            >
+              [+12u PHASE ASCEND]
+            </button>
+            <button
+              onClick={handleResetPhase}
+              className="px-2.5 py-1 rounded bg-[#0b1f2e] hover:bg-cyan-900 border border-cyan-700/60 text-cyan-300 text-[11px] font-bold transition-all cursor-pointer"
+              title="Return to reality cross-section W = 0"
+            >
+              [RE-ENTER 3D (W=0)]
+            </button>
+            <button
+              onClick={() => handleHyperRotate(3, Math.PI / 4)}
+              className="px-2 py-1 rounded bg-slate-800 hover:bg-slate-700 border border-slate-600 text-amber-300 text-[11px] transition-all cursor-pointer"
+              title="Rotate 45 degrees along XW plane (Invert Tether Frame)"
+            >
+              [XW FLIP]
+            </button>
+            <button
+              onClick={() => handleHyperRotate(4, Math.PI / 4)}
+              className="px-2 py-1 rounded bg-slate-800 hover:bg-slate-700 border border-slate-600 text-amber-300 text-[11px] transition-all cursor-pointer"
+              title="Rotate 45 degrees along YW plane"
+            >
+              [YW FLIP]
+            </button>
           </div>
         </div>
 

@@ -115,6 +115,50 @@ export const ThermodynamicBankHUD: React.FC<ThermodynamicBankHUDProps> = ({
         </div>
       </div>
 
+      {/* 4D Phase & Tesseract Hyper-Kinematics Telemetry */}
+      <div className="bg-[#05070c] p-3 rounded-lg border border-fuchsia-900/40 text-xs">
+        <div className="flex items-center justify-between border-b border-slate-800 pb-1.5 mb-2">
+          <div className="flex items-center gap-1.5 text-fuchsia-400 font-bold text-[11px]">
+            <span className="w-1.5 h-1.5 rounded-full bg-fuchsia-400 animate-pulse" />
+            <span>4D TESSERACT HYPER-TELEMETRY</span>
+          </div>
+          <span className={`text-[10px] px-1.5 py-0.5 rounded font-bold ${
+            Math.abs(human.w || 0) < 1.0
+              ? 'bg-cyan-950 text-cyan-400 border border-cyan-800'
+              : 'bg-fuchsia-950 text-fuchsia-400 border border-fuchsia-800 animate-pulse'
+          }`}>
+            {Math.abs(human.w || 0) < 1.0 ? 'IN-PHASE REALITY (W=0)' : 'PHASE-SHIFTED VACUUM'}
+          </span>
+        </div>
+
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-[11px]">
+          <div>
+            <span className="text-slate-500 block text-[10px]">W-PHASE DEPTH:</span>
+            <span className="text-fuchsia-300 font-bold">
+              {(human.w || 0).toFixed(2)} u
+            </span>
+          </div>
+          <div>
+            <span className="text-slate-500 block text-[10px]">VACUUM BLEED:</span>
+            <span className="text-rose-400 font-bold">
+              -{(human.phaseBleed || 0).toFixed(2)} J/t
+            </span>
+          </div>
+          <div>
+            <span className="text-slate-500 block text-[10px]">APPARENT 3D $r$:</span>
+            <span className="text-cyan-300 font-bold">
+              {(human.apparentRadius3D || human.radius || 16).toFixed(1)} px
+            </span>
+          </div>
+          <div>
+            <span className="text-slate-500 block text-[10px]">XW / YW ROTORS:</span>
+            <span className="text-amber-300 font-bold">
+              {human.rotor ? `${((human.rotor[3] || 0) * (180 / Math.PI)).toFixed(0)}° / ${((human.rotor[4] || 0) * (180 / Math.PI)).toFixed(0)}°` : '0° / 0°'}
+            </span>
+          </div>
+        </div>
+      </div>
+
       {/* Tactical Quick Action Controls */}
       <div className="flex gap-2">
         <button
