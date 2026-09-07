@@ -58,12 +58,50 @@ export interface GravityVector3D {
 
 export type TopologyType =
   | 'CONTINUOUS_TRI_STATE_GAUNTLET'
+  | 'BH_STAR_ACCRETION_DISK'
   | 'THE_NULL_FRICTION_TESSERACT'
   | 'ISOTROPIC_HYPER_SPHERE'
   | 'NULL_FRICTION_OCTAGON'
   | 'ALPHA_RING'
   | 'HYPER_TOROID'
   | 'KLEIN_LATTICE';
+
+export interface BlackHoleSingularity {
+  id: string;
+  pos4D: FloatVector4D;
+  posQ16: [Q16, Q16, Q16, Q16];
+  massQ16: Q16; // 0x00A00000 = 160.0 in Q16
+  massFloat: number;
+  eventHorizonRadius: number; // Schwarzschild radius in 4D space (~38.0)
+  eventHorizonSq: number;
+  photonSphereRadius: number; // 1.5 * r_s (~57.0)
+  iscoRadius: number; // Innermost Stable Circular Orbit: 3.0 * r_s (~114.0)
+  accretionOuterRadius: number; // ~320.0
+  hawkingRadiationFlux: number; // Thermodynamic radiation parameter
+  spinA: number; // Kerr spin parameter (0.0 to 0.98)
+  pulsePhase: number;
+  active: boolean;
+  annihilationCount: number;
+}
+
+export interface BHAccretionOrbitalRing {
+  id: string;
+  radius: number;
+  radiusQ16: Q16;
+  orbitalVelocity: number;
+  wPhaseOffset: number;
+  resonanceHarmonic: string;
+  color: string;
+}
+
+export interface BHAccretionArchive {
+  hash: string;
+  singularity: BlackHoleSingularity;
+  hull: SplineHull;
+  anchors: TetherAnchor[];
+  orbitalRings: BHAccretionOrbitalRing[];
+  timestamp: number;
+}
 
 export type GauntletSectorId = 'SECTOR_I_ASCENT' | 'SECTOR_II_BREACH' | 'SECTOR_III_APEX';
 
@@ -257,6 +295,11 @@ export interface Entity {
   trail4D?: FloatVector4D[];
   activeTether: ActiveTether | null;
   score: number;
+  timeDilationFactor?: number; // Schwarzschild / Kerr time dilation factor gamma (1.0 = normal, 0.05 = near event horizon)
+  inAccretionOrbit?: boolean; // True if within stable accretion orbital limits
+  orbitalDecay?: number; // 0 to 1 decay index toward singularity collapse
+  bhAnnihilationActive?: boolean; // Tautological collapse triggered
+  bhAnnihilationProgress?: number; // 0 to 1 collapse animation
 }
 
 export interface RollbackFrame {
@@ -277,6 +320,8 @@ export interface RollbackFrame {
   be_stasis: number;
   human_w?: number;
   be_w?: number;
+  time_dilation_factor?: number; // BH* time dilation at current tick
+  bh_dist_sq?: number; // Hyperspatial separation distance squared
   arena_points_state: FloatVector[];
   arena_points_state_3d?: FloatVector3D[];
   parity_valid: boolean;

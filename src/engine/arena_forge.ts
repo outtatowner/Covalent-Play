@@ -3,10 +3,12 @@
  * Handles dynamic geometric deformation inputs, Bézier hulls, and BVH recalculation.
  */
 
-import { SplineHull, SplineControlPoint, TetherAnchor, BoundingBox, TopologyType } from '../types';
+import { SplineHull, SplineControlPoint, TetherAnchor, BoundingBox, TopologyType, BlackHoleSingularity } from '../types';
 import { CyberArenaSynthesizer, WELL_OFFSET_Q16 } from './arena_synthesizer';
 import { VolumetricArenaSynthesizer } from './omni_axial_arena';
 import { autopoieticGauntlet } from './gauntlet_synthesizer';
+import { covalentBHMechanics, DEFAULT_BH_MASS_Q16 } from './covalent_bh_mechanics';
+import { bhLevelGenerator } from './node_0xBH_ACCRETION_SYNTHESIZER';
 
 export type { TopologyType };
 
@@ -15,6 +17,7 @@ export class ArenaForge {
   public anchors: TetherAnchor[] = [];
   public bvh: BoundingBox[] = [];
   public topologyType: TopologyType = 'CONTINUOUS_TRI_STATE_GAUNTLET';
+  public singularity: BlackHoleSingularity | null = null;
   public center: { x: number; y: number } = { x: 450, y: 350 };
   public radiusX: number = 320;
   public radiusY: number = 240;
@@ -39,6 +42,15 @@ export class ArenaForge {
         friction: 0.012
       };
       this.synthesizeContinuousTriStateGauntlet();
+    } else if (topology === 'BH_STAR_ACCRETION_DISK') {
+      this.hull = {
+        id: 'bh_accretion_disk_hull',
+        points: [],
+        color: '#38bdf8',
+        tension: 0.78,
+        friction: 0.006
+      };
+      this.synthesizeBHStarAccretionDisk();
     } else if (topology === 'THE_NULL_FRICTION_TESSERACT') {
       this.hull = this.volumetricSynthesizer.generateHyperSphere(this.center.x, this.center.y, 0, this.radiusX * 1.1).hull;
       this.synthesizeNullFrictionTesseract();
@@ -56,6 +68,8 @@ export class ArenaForge {
     this.topologyType = type;
     if (type === 'CONTINUOUS_TRI_STATE_GAUNTLET') {
       this.synthesizeContinuousTriStateGauntlet();
+    } else if (type === 'BH_STAR_ACCRETION_DISK') {
+      this.synthesizeBHStarAccretionDisk();
     } else if (type === 'THE_NULL_FRICTION_TESSERACT') {
       this.synthesizeNullFrictionTesseract();
     } else if (type === 'ISOTROPIC_HYPER_SPHERE') {
@@ -63,6 +77,7 @@ export class ArenaForge {
     } else if (type === 'NULL_FRICTION_OCTAGON') {
       this.synthesizeNullFrictionOctagon();
     } else {
+      this.singularity = null;
       this.hull = this.generateHull(type);
       this.generateAnchors();
       this.recalculateBVH();
@@ -85,6 +100,29 @@ export class ArenaForge {
       friction: 0.012
     };
     this.anchors = archive.anchors;
+
+    // Organelle 0xC1 / 0xC2: Mount the BH* Singularity in Sector III (The Apex: Z = 360)
+    // The Tri-State Gauntlet now seamlessly culminates in the Singularity!
+    this.singularity = covalentBHMechanics.sys_covalent_spawn_singularity(DEFAULT_BH_MASS_Q16, {
+      x: this.center.x,
+      y: this.center.y,
+      z: 360,
+      w: 0
+    });
+
+    this.recalculateBVH();
+  }
+
+  /**
+   * Organelle 0xC2_COVALENT: The BH* Accretion Generator
+   * Synthesizes the full orbital accretion manifold around the singularity.
+   */
+  public synthesizeBHStarAccretionDisk(): void {
+    this.topologyType = 'BH_STAR_ACCRETION_DISK';
+    const archive = bhLevelGenerator.latestArchive || bhLevelGenerator.synthesizeOrbitalManifold(DEFAULT_BH_MASS_Q16, 3);
+    this.hull = archive.hull;
+    this.anchors = archive.anchors;
+    this.singularity = archive.singularity;
     this.recalculateBVH();
   }
 

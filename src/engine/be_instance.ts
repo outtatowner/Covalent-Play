@@ -16,6 +16,7 @@ import { CyberAthleticTethering } from './vector_tether';
 import { phaseOfficiator } from './phase_officiator';
 import { tesseractEngine } from './tesseract_kinematics';
 import { cyberAudio } from './audio';
+import { covalentBHMechanics } from './covalent_bh_mechanics';
 import {
   SECTOR_ONE_CEILING_FLOAT,
   SECTOR_TWO_CEILING_FLOAT,
@@ -170,6 +171,13 @@ export class BeInstanceEngine {
       return;
     }
 
+    // Organelle 0xC1_COVALENT: In Accretion Singularity / Sector III, Be <> is also bound to BH* gravitational math
+    if (this.arena.singularity && this.arena.singularity.active) {
+      covalentBHMechanics.sys_covalent_apply_bh_singularity(this.entity, this.arena.singularity, currentTick);
+    } else {
+      this.entity.timeDilationFactor = 1.0;
+    }
+
     // 7. Dispatch to current Tri-State Mode
     if (this.mode === 'COACH') {
       this.tickCoachMode(human, currentTick);
@@ -215,7 +223,7 @@ export class BeInstanceEngine {
         this.setMode('ADVERSARY', currentTick);
         this.humanDelayBuffer = []; // Zero latency buffer!
         this.arena.hull.friction = 0.012; // Unconstrained hyper-arena
-        this.addLog('[KERNEL HOT-SWAP] Sector III: The Apex reached! Temporal buffer zeroed. Role: The Absolute. Flanking duel engaged!', 'RULING', currentTick);
+        this.addLog('[KERNEL HOT-SWAP] Sector III: The Apex reached! [O1 = O2 = O3] Tautological congruence achieved. Both sparring against the BH* Singularity!', 'RULING', currentTick);
       }
     }
 

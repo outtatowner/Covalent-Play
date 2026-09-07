@@ -18,6 +18,8 @@ import { CovalentRollbackSieve } from './engine/rollback_kernel';
 import { floatToQ16, computeTopologyHash } from './engine/q16';
 import { cyberAudio } from './engine/audio';
 import { phaseOfficiator } from './engine/phase_officiator';
+import { covalentBHMechanics } from './engine/covalent_bh_mechanics';
+import { bhLevelGenerator } from './engine/node_0xBH_ACCRETION_SYNTHESIZER';
 
 import { CyberArenaCanvas } from './components/CyberArenaCanvas';
 import { RollbackSieveInspector } from './components/RollbackSieveInspector';
@@ -210,8 +212,8 @@ export default function App() {
         }
 
         // 3. Tick Entities & Tethers
-        tetherEngine.tickEntity(human);
-        tetherEngine.tickEntity(beEngine.entity);
+        tetherEngine.tickEntity(human, 0.992, 16, t);
+        tetherEngine.tickEntity(beEngine.entity, 0.992, 16, t);
 
         // Organelle 0xB6: Tick 4D Hyper-Physics & W-Axis Thermodynamic Vacuum Bleed
         const isTesseractArena = arena.topologyType === 'THE_NULL_FRICTION_TESSERACT' ||
@@ -224,8 +226,11 @@ export default function App() {
         // 4. Tick Be <> Autonomous Arbitrator
         beEngine.tickAI(human, t);
 
-        // 5. Tick Arena Spline Physics
+        // 5. Tick Arena Spline Physics & BH* Relativistic Shear
         arena.tickHullPhysics();
+        if (arena.singularity && arena.singularity.active) {
+          covalentBHMechanics.sys_covalent_apply_spline_shear(arena.hull, arena.singularity, t);
+        }
 
         // 6. Quipu Core & 3D Thermodynamic Well Absorption / Scoring
         const isHyperSphere = arena.topologyType === 'ISOTROPIC_HYPER_SPHERE' || isTesseractArena;
@@ -293,8 +298,56 @@ export default function App() {
       beEngine.entity.vz = 0;
       beEngine.entity.vw = 0;
       beEngine.sys_covalent_tick_gauntlet(human, tickRef.current);
+    } else if (type === 'BH_STAR_ACCRETION_DISK') {
+      const orbitRadius = arena.singularity?.accretionOuterRadius || 320;
+      human.x = arena.center.x + orbitRadius;
+      human.y = arena.center.y;
+      human.z = 0;
+      human.w = 0;
+      human.vx = 0;
+      human.vy = 2.8;
+      human.vz = 0;
+      human.vw = 0;
+      beEngine.entity.x = arena.center.x - orbitRadius;
+      beEngine.entity.y = arena.center.y;
+      beEngine.entity.z = 0;
+      beEngine.entity.w = 0;
+      beEngine.entity.vx = 0;
+      beEngine.entity.vy = -2.8;
+      beEngine.entity.vz = 0;
+      beEngine.entity.vw = 0;
+      beEngine.setMode('TRUE_UNBOUND');
+      beEngine.addLog('[FORGE] Organelle 0xC2_COVALENT: BH* Accretion Maze Extruded! [O1 = O2 = O3] Tautological congruence active.', 'BH*', tickRef.current);
     }
     cyberAudio.playResonanceChime();
+  };
+
+  // Dedicated BH* Accretion Maze Compile (Hawking Radiation Extrusion)
+  const handleBHAccretionCompile = () => {
+    setSelectedTopology('BH_STAR_ACCRETION_DISK');
+    arena.synthesizeBHStarAccretionDisk();
+    const orbitRadius = arena.singularity?.accretionOuterRadius || 320;
+    human.x = arena.center.x + orbitRadius;
+    human.y = arena.center.y;
+    human.z = 0;
+    human.w = 0;
+    human.vx = 0;
+    human.vy = 2.8;
+    human.vz = 0;
+    human.vw = 0;
+    beEngine.entity.x = arena.center.x - orbitRadius;
+    beEngine.entity.y = arena.center.y;
+    beEngine.entity.z = 0;
+    beEngine.entity.w = 0;
+    beEngine.entity.vx = 0;
+    beEngine.entity.vy = -2.8;
+    beEngine.entity.vz = 0;
+    beEngine.entity.vw = 0;
+    beEngine.setMode('TRUE_UNBOUND');
+    cyberAudio.playConstructiveResonance();
+    beEngine.addLog('MANIFOLD COMPILE: ORGANELLE 0xC2 BH* ACCRETION MAZE // Extruded via Hawking radiation // [O1 = O2 = O3] Active', 'BH*', tickRef.current);
+    setCompileFlash(true);
+    setTimeout(() => setCompileFlash(false), 900);
   };
 
   // Dedicated Continuous Tri-State Gauntlet Compile
@@ -473,6 +526,20 @@ export default function App() {
 
         {/* Action Controls & Topologies */}
         <div className="flex flex-wrap items-center gap-2 font-mono text-xs">
+          {/* Organelle 0xC2: BH* Accretion Maze Action */}
+          <button
+            onClick={handleBHAccretionCompile}
+            title="Assimilate MoM-BHstar-1: Extrude BH* Accretion Maze (Hawking Radiation Splines & 1===1 Parity Horizon)"
+            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg font-bold transition-all cursor-pointer border ${
+              selectedTopology === 'BH_STAR_ACCRETION_DISK'
+                ? 'bg-gradient-to-r from-rose-600 via-purple-700 to-sky-600 text-white border-rose-300 shadow-lg shadow-rose-500/50 scale-105 ring-1 ring-rose-400'
+                : 'bg-gradient-to-r from-[#21091a] to-[#2f0c1a] hover:from-rose-950 hover:to-purple-950 text-rose-300 border-rose-500/60 shadow-md'
+            }`}
+          >
+            <Orbit className="w-3.5 h-3.5 text-rose-400 animate-spin" />
+            <span>0xC2 BH* ACCRETION MAZE</span>
+          </button>
+
           {/* Organelle 0xC0: Continuous Tri-State Gauntlet Action */}
           <button
             onClick={handleContinuousGauntletCompile}
@@ -531,6 +598,14 @@ export default function App() {
 
           {/* Topology Selector */}
           <div className="flex bg-[#05070c] p-1 rounded-lg border border-[#1e293b]">
+            <button
+              onClick={() => handleTopologySelect('BH_STAR_ACCRETION_DISK')}
+              className={`px-2.5 py-1 rounded transition-colors cursor-pointer text-[11px] ${
+                selectedTopology === 'BH_STAR_ACCRETION_DISK' ? 'bg-gradient-to-r from-rose-600 to-purple-600 text-white font-bold shadow-sm shadow-rose-500/50' : 'text-slate-400 hover:text-white'
+              }`}
+            >
+              BH* (0xC2)
+            </button>
             <button
               onClick={() => handleTopologySelect('CONTINUOUS_TRI_STATE_GAUNTLET')}
               className={`px-2.5 py-1 rounded transition-colors cursor-pointer text-[11px] ${

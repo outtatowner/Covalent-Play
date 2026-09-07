@@ -28,6 +28,9 @@ import {
   SECTOR_TWO_CEILING_FLOAT,
   SECTOR_APEX_CEILING_FLOAT
 } from '../engine/gauntlet_synthesizer';
+import { covalentBHMechanics } from '../engine/covalent_bh_mechanics';
+import { bhLevelGenerator } from '../engine/node_0xBH_ACCRETION_SYNTHESIZER';
+import { BlackHoleSingularity } from '../types';
 import { Orbit, Compass, Eye, Shield, Zap, Sparkles, Layers, Disc } from 'lucide-react';
 
 interface CyberArenaCanvasProps {
@@ -543,6 +546,104 @@ export const CyberArenaCanvas: React.FC<CyberArenaCanvasProps> = ({
             }
           }
           ctx.restore();
+        } else if (arena.topologyType === 'BH_STAR_ACCRETION_DISK') {
+          // Organelle 0xC2_COVALENT: Render Hawking Radiation Extruded Accretion Disk Manifold
+          ctx.save();
+          const singularity = arena.singularity;
+          const cx = singularity ? singularity.pos4D.x : arena.center.x;
+          const cy = singularity ? singularity.pos4D.y : arena.center.y;
+          const cz = singularity ? singularity.pos4D.z : 0;
+
+          const archive = bhLevelGenerator.latestArchive;
+          const rings = archive ? archive.orbitalRings : [];
+
+          // 1. Render Concentric Stable Resonance Orbit Rings
+          for (let rIdx = 0; rIdx < rings.length; rIdx++) {
+            const ring = rings[rIdx];
+            const segs = 64;
+            ctx.beginPath();
+            let started = false;
+            for (let s = 0; s <= segs; s++) {
+              const ang = (s / segs) * Math.PI * 2 + currentTick * (ring.orbitalVelocity * 0.003);
+              const zWarp = Math.sin(ang * 2) * 16.0;
+              const px = cx + Math.cos(ang) * ring.radius;
+              const py = cy + Math.sin(ang) * ring.radius;
+              const pz = cz + zWarp;
+              const p = proj(px, py, pz);
+              if (p.visible) {
+                if (!started) {
+                  ctx.moveTo(p.sx, p.sy);
+                  started = true;
+                } else {
+                  ctx.lineTo(p.sx, p.sy);
+                }
+              }
+            }
+            ctx.strokeStyle = ring.color || '#38bdf8';
+            ctx.lineWidth = rIdx === 0 ? 2.4 : 1.2;
+            if (rIdx === 0) {
+              ctx.shadowColor = '#f43f5e';
+              ctx.shadowBlur = 14;
+            } else {
+              ctx.shadowBlur = 0;
+            }
+            ctx.stroke();
+
+            // Ring Harmonic Label
+            const labelP = proj(cx + ring.radius + 6, cy, cz);
+            if (labelP.visible && showCoordinates) {
+              ctx.fillStyle = ring.color || '#38bdf8';
+              ctx.font = '8px monospace';
+              ctx.fillText(`${ring.resonanceHarmonic} [R: ${ring.radius.toFixed(0)}]`, labelP.sx, labelP.sy);
+            }
+          }
+
+          // 2. Swirling Logarithmic Accretion Streamlines (Extruded from Singularity)
+          const streamCount = 12;
+          for (let s = 0; s < streamCount; s++) {
+            const baseAngle = (s / streamCount) * Math.PI * 2 + currentTick * 0.02;
+            ctx.beginPath();
+            let started = false;
+            const steps = 32;
+            for (let step = 0; step <= steps; step++) {
+              const tNorm = step / steps;
+              const rad = (singularity?.eventHorizonRadius || 38) + tNorm * ((singularity?.accretionOuterRadius || 320) - (singularity?.eventHorizonRadius || 38));
+              const spiralAngle = baseAngle + Math.log(rad * 0.05) * 2.4;
+              const zTilt = Math.sin(spiralAngle * 2) * (14.0 * (1 - tNorm));
+              const px = cx + Math.cos(spiralAngle) * rad;
+              const py = cy + Math.sin(spiralAngle) * rad;
+              const pz = cz + zTilt;
+              const p = proj(px, py, pz);
+              if (p.visible) {
+                if (!started) {
+                  ctx.moveTo(p.sx, p.sy);
+                  started = true;
+                } else {
+                  ctx.lineTo(p.sx, p.sy);
+                }
+              }
+            }
+            const isApproaching = Math.sin(baseAngle) > 0;
+            ctx.strokeStyle = isApproaching ? 'rgba(56, 189, 248, 0.45)' : 'rgba(244, 63, 94, 0.35)';
+            ctx.lineWidth = 1.2;
+            ctx.stroke();
+          }
+
+          // 3. Hawking Radiation Extruded Relativistic Jets (along Z-axis)
+          const jetHeights = [80, 140, 200];
+          for (const jh of jetHeights) {
+            for (const dir of [1, -1]) {
+              const jetP = proj(cx, cy, cz + dir * jh);
+              if (jetP.visible) {
+                ctx.fillStyle = dir === 1 ? '#38bdf8' : '#a855f7';
+                ctx.beginPath();
+                ctx.arc(jetP.sx, jetP.sy, 3.5 * jetP.scale, 0, Math.PI * 2);
+                ctx.fill();
+              }
+            }
+          }
+
+          ctx.restore();
         } else {
           // 3. Volumetric Isotropic Hyper-Sphere Bounds
           const sphereRadius = Math.min(arena.radiusX, 220);
@@ -726,6 +827,55 @@ export const CyberArenaCanvas: React.FC<CyberArenaCanvasProps> = ({
           ctx.restore();
         }
 
+        // 5b. Organelle 0xC1_COVALENT: Render BH* Singularity Core (Event Horizon, Photon Sphere & Lensing)
+        if (arena.singularity && arena.singularity.active) {
+          const bh = arena.singularity;
+          const bp = proj(bh.pos4D.x, bh.pos4D.y, bh.pos4D.z);
+          if (bp.visible) {
+            ctx.save();
+            // 1. Photon Sphere & Lensing Halo (r = 1.5 * r_eh)
+            const photonRadius = bh.eventHorizonRadius * 1.5 * bp.scale;
+            const photonGrad = ctx.createRadialGradient(bp.sx, bp.sy, bh.eventHorizonRadius * bp.scale, bp.sx, bp.sy, photonRadius * 1.4);
+            photonGrad.addColorStop(0, 'rgba(244, 63, 94, 0.85)');
+            photonGrad.addColorStop(0.5, 'rgba(56, 189, 248, 0.45)');
+            photonGrad.addColorStop(1, 'rgba(168, 85, 247, 0)');
+            ctx.fillStyle = photonGrad;
+            ctx.beginPath();
+            ctx.arc(bp.sx, bp.sy, photonRadius * 1.4, 0, Math.PI * 2);
+            ctx.fill();
+
+            // Photon Sphere Ring
+            ctx.strokeStyle = '#f43f5e';
+            ctx.shadowColor = '#f43f5e';
+            ctx.shadowBlur = 18;
+            ctx.lineWidth = 2.0;
+            ctx.beginPath();
+            ctx.arc(bp.sx, bp.sy, photonRadius, 0, Math.PI * 2);
+            ctx.stroke();
+
+            // 2. Event Horizon (The Pitch Black Singularity Void)
+            ctx.shadowBlur = 0;
+            ctx.fillStyle = '#030712'; // Deepest cosmic black
+            ctx.beginPath();
+            ctx.arc(bp.sx, bp.sy, bh.eventHorizonRadius * bp.scale, 0, Math.PI * 2);
+            ctx.fill();
+
+            ctx.strokeStyle = '#38bdf8';
+            ctx.lineWidth = 1.5;
+            ctx.stroke();
+
+            // 3. Central Q16 Coordinate & Parity Inscription
+            ctx.fillStyle = '#ffffff';
+            ctx.font = '9px monospace';
+            ctx.textAlign = 'center';
+            ctx.fillText(`BH* CORE (0,0,0,0)`, bp.sx, bp.sy - bh.eventHorizonRadius * bp.scale - 12);
+            ctx.fillStyle = '#f43f5e';
+            ctx.font = '8px monospace';
+            ctx.fillText(`[ 1 === 1 PARITY HORIZON ] // ISCO: ${bh.iscoRadius.toFixed(0)}`, bp.sx, bp.sy + bh.eventHorizonRadius * bp.scale + 16);
+            ctx.restore();
+          }
+        }
+
         // 6. Render 3D Tethers
         const render3DTether = (ent: Entity, tether: ActiveTether) => {
           let targetPoint: FloatVector3D = { x: 0, y: 0, z: 0 };
@@ -754,16 +904,43 @@ export const CyberArenaCanvas: React.FC<CyberArenaCanvasProps> = ({
             ctx.shadowBlur = 12;
             ctx.lineWidth = (2 + tension * 2.5) * ep.scale;
 
-            // 3D dynamic sag midpoint
-            const midX = (ent.x + targetPoint.x) * 0.5;
-            const midY = (ent.y + targetPoint.y) * 0.5;
-            const midZ = (ent.z || 0 + targetPoint.z) * 0.5 - (1.0 - tension) * 20;
-            const mp = proj(midX, midY, midZ);
+            // Check if Black Hole Gravitational Lensing applies
+            if (arena.singularity && arena.singularity.active) {
+              const lensResult = covalentBHMechanics.sys_covalent_lens_tether_trajectory(
+                { x: ent.x, y: ent.y, z: ent.z || 0, w: ent.w || 0 },
+                { x: targetPoint.x, y: targetPoint.y, z: targetPoint.z, w: 0 },
+                arena.singularity,
+                8
+              );
 
-            ctx.beginPath();
-            ctx.moveTo(ep.sx, ep.sy);
-            ctx.quadraticCurveTo(mp.sx, mp.sy, tp.sx, tp.sy);
-            ctx.stroke();
+              ctx.beginPath();
+              let started = false;
+              for (const wp of lensResult.points) {
+                const wpProj = proj(wp.x, wp.y, wp.z);
+                if (wpProj.visible) {
+                  if (!started) {
+                    ctx.moveTo(wpProj.sx, wpProj.sy);
+                    started = true;
+                  } else {
+                    ctx.lineTo(wpProj.sx, wpProj.sy);
+                  }
+                }
+              }
+              if (started) {
+                ctx.stroke();
+              }
+            } else {
+              // 3D dynamic sag midpoint
+              const midX = (ent.x + targetPoint.x) * 0.5;
+              const midY = (ent.y + targetPoint.y) * 0.5;
+              const midZ = ((ent.z || 0) + targetPoint.z) * 0.5 - (1.0 - tension) * 20;
+              const mp = proj(midX, midY, midZ);
+
+              ctx.beginPath();
+              ctx.moveTo(ep.sx, ep.sy);
+              ctx.quadraticCurveTo(mp.sx, mp.sy, tp.sx, tp.sy);
+              ctx.stroke();
+            }
 
             // Energy siphon pulses along tether
             const pulseCount = 4;
@@ -919,11 +1096,18 @@ export const CyberArenaCanvas: React.FC<CyberArenaCanvasProps> = ({
           ctx.restore();
         }
 
-        // Tri-State Banner at top
+        // Tri-State & BH* Accretion Banner at top
         ctx.save();
         ctx.font = '10px monospace';
         ctx.textAlign = 'center';
-        if (beEngine.mode === 'COACH') {
+        if (arena.singularity && arena.singularity.active && (arena.topologyType === 'BH_STAR_ACCRETION_DISK' || beEngine.gauntletSector === 'SECTOR_III_APEX')) {
+          const dilation = human.timeDilationFactor ?? 1.0;
+          ctx.fillStyle = '#f43f5e';
+          ctx.fillText(`[BH* SINGULARITY HORIZON] O1 = O2 = O3 CONGRUENCE // TIME DILATION γ: ${dilation.toFixed(3)} // 1 === 1 PARITY`, width * 0.5, 18);
+          ctx.fillStyle = '#94a3b8';
+          ctx.font = '8px monospace';
+          ctx.fillText(`MASS: 0x${arena.singularity.massQ16.toString(16).toUpperCase()} // ISCO: ${arena.singularity.iscoRadius.toFixed(0)} // SHEAR: ${(arena.singularity.gravitationalShearQ16 / 65536).toFixed(2)}`, width * 0.5, 30);
+        } else if (beEngine.mode === 'COACH') {
           ctx.fillStyle = '#38bdf8';
           ctx.fillText('SPARRING STATE 0x00: PvE (THE MIRROR) // 250ms COGNITIVE DELAY // TELEGRAPHED W-LISSAJOUS // LEDGER FORGIVENESS', width * 0.5, 20);
         } else if (beEngine.mode === 'COOP_PEER') {

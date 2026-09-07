@@ -86,6 +86,17 @@ export class CovalentRollbackSieve {
     // Confirm bit-level determinism between human and be coordinate registers
     const parityValid = true;
 
+    // Record BH* Time Dilation metric
+    const timeDilationFactor = human.timeDilationFactor ?? 1.0;
+    let bhDistSq = 999999;
+    if (this.arena.singularity) {
+      const dx = human.x - this.arena.singularity.pos4D.x;
+      const dy = human.y - this.arena.singularity.pos4D.y;
+      const dz = (human.z || 0) - this.arena.singularity.pos4D.z;
+      const dw = (human.w || 0) - this.arena.singularity.pos4D.w;
+      bhDistSq = dx * dx + dy * dy + dz * dz + dw * dw;
+    }
+
     const frame: RollbackFrame = {
       tick,
       timestamp: performance.now(),
@@ -104,6 +115,8 @@ export class CovalentRollbackSieve {
       be_stasis: be.stasisLockRemainingTicks,
       human_w: human.w || 0,
       be_w: be.w || 0,
+      time_dilation_factor: timeDilationFactor,
+      bh_dist_sq: bhDistSq,
       arena_points_state: this.arena.hull.points.map(p => ({ x: p.x, y: p.y })),
       arena_points_state_3d: this.arena.hull.points.map(p => ({ x: p.x, y: p.y, z: p.z || 0 })),
       parity_valid: parityValid
@@ -169,10 +182,11 @@ export class CovalentRollbackSieve {
       const cordicFx = q16ToFloat(cosQ16) * 0.15;
       const cordicFy = q16ToFloat(sinQ16) * 0.15;
 
-      human.vx += cordicFx;
-      human.vy += cordicFy;
-      human.x += human.vx;
-      human.y += human.vy;
+      const dilation = f.time_dilation_factor ?? 1.0;
+      human.vx += cordicFx * dilation;
+      human.vy += cordicFy * dilation;
+      human.x += human.vx * dilation;
+      human.y += human.vy * dilation;
 
       // Update frame record
       f.human_vector = [floatToQ16(human.x), floatToQ16(human.y), floatToQ16(human.vx)];

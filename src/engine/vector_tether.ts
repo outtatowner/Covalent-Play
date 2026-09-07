@@ -7,9 +7,10 @@
  * bound strictly by the dV/dt <= 0 thermodynamic limit.
  */
 
-import { Q16Vector, Entity, FloatVector } from '../types';
+import { Q16Vector, Entity, FloatVector, FloatVector4D } from '../types';
 import { floatToQ16, q16ToFloat } from './q16';
 import { ArenaForge } from './arena_forge';
+import { covalentBHMechanics } from './covalent_bh_mechanics';
 
 export interface ShearEvent {
   sourceId: string;
@@ -196,7 +197,8 @@ export class CyberAthleticTethering {
   public tickEntity(
     entity: Entity,
     friction: number = 0.992,
-    maxSpeed: number = 16
+    maxSpeed: number = 16,
+    currentTick: number = 0
   ): void {
     const is3D = this.arena.topologyType === 'ISOTROPIC_HYPER_SPHERE';
     const effectiveFriction = is3D ? 0.998 : friction; // Vector inertia drift in Zero-G isotropic void
@@ -226,11 +228,19 @@ export class CyberAthleticTethering {
       entity.vz = (entity.vz || 0) + g.z * 0.1;
     }
 
+    // Organelle 0xC1_COVALENT: Apply Black Hole Star (The Singularity) Gravitational Shear & Time Dilation
+    if (this.arena.singularity && this.arena.singularity.active) {
+      covalentBHMechanics.sys_covalent_apply_bh_singularity(entity, this.arena.singularity, currentTick);
+    } else {
+      entity.timeDilationFactor = 1.0;
+    }
+
     // Apply tether pulling physics
     if (entity.activeTether && !entity.isStasisLocked) {
       let tx = 0;
       let ty = 0;
       let tz = 0;
+      let tw = 0;
 
       if (entity.activeTether.targetAnchorId) {
         const anchor = this.arena.anchors.find(a => a.id === entity.activeTether!.targetAnchorId);
@@ -266,38 +276,58 @@ export class CyberAthleticTethering {
       }
 
       if (tx !== 0 || ty !== 0 || tz !== 0) {
-        const dx = tx - entity.x;
-        const dy = ty - entity.y;
-        const dz = tz - (entity.z || 0);
-        const dist3D = Math.hypot(dx, dy, dz);
+        // Check BH* Gravitational Lensing & Event Horizon severing
+        if (this.arena.singularity && this.arena.singularity.active) {
+          const lensCheck = covalentBHMechanics.sys_covalent_lens_tether_trajectory(
+            { x: entity.x, y: entity.y, z: entity.z || 0, w: entity.w || 0 },
+            { x: tx, y: ty, z: tz, w: tw },
+            this.arena.singularity,
+            6
+          );
 
-        if (dist3D > entity.activeTether.maxLength) {
-          // Snap tether if pulled past max length
-          entity.activeTether = null;
-        } else {
-          // 3D Spring pull
-          const pullForce = 0.58;
-          const nx = dx / (dist3D || 1);
-          const ny = dy / (dist3D || 1);
-          const nz = dz / (dist3D || 1);
+          if (lensCheck.isSevered) {
+            // Tether crosses event horizon -> infinite shear tears tether!
+            entity.activeTether = null;
+          }
+        }
 
-          entity.vx += nx * pullForce;
-          entity.vy += ny * pullForce;
-          entity.vz = (entity.vz || 0) + nz * pullForce;
+        if (entity.activeTether) {
+          const dx = tx - entity.x;
+          const dy = ty - entity.y;
+          const dz = tz - (entity.z || 0);
+          const dist3D = Math.hypot(dx, dy, dz);
 
-          // Slingshot orbital cross-velocity
-          const crossX = -ny * 0.18;
-          const crossY = nx * 0.18;
-          entity.vx += crossX;
-          entity.vy += crossY;
+          if (dist3D > entity.activeTether.maxLength) {
+            // Snap tether if pulled past max length
+            entity.activeTether = null;
+          } else {
+            // 3D Spring pull
+            const pullForce = 0.58;
+            const nx = dx / (dist3D || 1);
+            const ny = dy / (dist3D || 1);
+            const nz = dz / (dist3D || 1);
 
-          entity.activeTether.tension = Math.min(1.0, dist3D / entity.activeTether.maxLength);
+            entity.vx += nx * pullForce;
+            entity.vy += ny * pullForce;
+            entity.vz = (entity.vz || 0) + nz * pullForce;
 
-          // Small energy consumption for maintaining high-tension tether
-          entity.energy = Math.max(0, entity.energy - 0.2);
+            // Slingshot orbital cross-velocity
+            const crossX = -ny * 0.18;
+            const crossY = nx * 0.18;
+            entity.vx += crossX;
+            entity.vy += crossY;
+
+            entity.activeTether.tension = Math.min(1.0, dist3D / entity.activeTether.maxLength);
+
+            // Small energy consumption for maintaining high-tension tether
+            entity.energy = Math.max(0, entity.energy - 0.2);
+          }
         }
       }
     }
+
+    // Time Dilation Scaling: Local engine ticks are exponentially decelerated relative to distant entities
+    const timeDilationScale = entity.timeDilationFactor ?? 1.0;
 
     // 3D Velocity clamp and integration (Vector Inertia Drift)
     const speed3D = Math.hypot(entity.vx, entity.vy, entity.vz || 0);
@@ -312,9 +342,13 @@ export class CyberAthleticTethering {
     entity.vy *= effectiveFriction;
     entity.vz = (entity.vz || 0) * effectiveFriction;
 
-    entity.x += entity.vx;
-    entity.y += entity.vy;
-    entity.z = (entity.z || 0) + (entity.vz || 0);
+    // Position integration scaled by local timeline dilation
+    entity.x += entity.vx * timeDilationScale;
+    entity.y += entity.vy * timeDilationScale;
+    entity.z = (entity.z || 0) + (entity.vz || 0) * timeDilationScale;
+    if (entity.vw) {
+      entity.w = (entity.w || 0) + entity.vw * timeDilationScale;
+    }
 
     // Arena hull / Bounding Sphere collision deflection
     if (is3D) {
