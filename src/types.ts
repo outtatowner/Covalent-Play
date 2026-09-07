@@ -243,6 +243,7 @@ export interface TetherAnchor {
 export interface ActiveTether {
   sourceId: string;
   targetAnchorId?: string;
+  targetEntityId?: string;
   targetPoint?: FloatVector;
   targetPoint3D?: FloatVector3D;
   targetPoint4D?: FloatVector4D;

@@ -162,9 +162,11 @@ export default function App() {
           const thrust = 0.42;
           const is3D = arena.topologyType === 'ISOTROPIC_HYPER_SPHERE' ||
             arena.topologyType === 'THE_NULL_FRICTION_TESSERACT' ||
-            arena.topologyType === 'CONTINUOUS_TRI_STATE_GAUNTLET';
+            arena.topologyType === 'CONTINUOUS_TRI_STATE_GAUNTLET' ||
+            arena.topologyType === 'BH_STAR_ACCRETION_DISK';
           const isTesseract = arena.topologyType === 'THE_NULL_FRICTION_TESSERACT' ||
-            arena.topologyType === 'CONTINUOUS_TRI_STATE_GAUNTLET';
+            arena.topologyType === 'CONTINUOUS_TRI_STATE_GAUNTLET' ||
+            arena.topologyType === 'BH_STAR_ACCRETION_DISK';
 
           // Planar XY Thrust
           if (keysPressed.current['w'] || keysPressed.current['arrowup']) human.vy -= thrust;
@@ -212,12 +214,13 @@ export default function App() {
         }
 
         // 3. Tick Entities & Tethers
-        tetherEngine.tickEntity(human, 0.992, 16, t);
-        tetherEngine.tickEntity(beEngine.entity, 0.992, 16, t);
+        tetherEngine.tickEntity(human, 0.992, 16, t, beEngine.entity);
+        tetherEngine.tickEntity(beEngine.entity, 0.992, 16, t, human);
 
         // Organelle 0xB6: Tick 4D Hyper-Physics & W-Axis Thermodynamic Vacuum Bleed
         const isTesseractArena = arena.topologyType === 'THE_NULL_FRICTION_TESSERACT' ||
-          arena.topologyType === 'CONTINUOUS_TRI_STATE_GAUNTLET';
+          arena.topologyType === 'CONTINUOUS_TRI_STATE_GAUNTLET' ||
+          arena.topologyType === 'BH_STAR_ACCRETION_DISK';
         if (isTesseractArena) {
           phaseOfficiator.tickHyperPhysics(human, 0, t);
           phaseOfficiator.tickHyperPhysics(beEngine.entity, human.w || 0, t);

@@ -198,7 +198,8 @@ export class CyberAthleticTethering {
     entity: Entity,
     friction: number = 0.992,
     maxSpeed: number = 16,
-    currentTick: number = 0
+    currentTick: number = 0,
+    opponent?: Entity
   ): void {
     const is3D = this.arena.topologyType === 'ISOTROPIC_HYPER_SPHERE';
     const effectiveFriction = is3D ? 0.998 : friction; // Vector inertia drift in Zero-G isotropic void
@@ -242,7 +243,18 @@ export class CyberAthleticTethering {
       let tz = 0;
       let tw = 0;
 
-      if (entity.activeTether.targetAnchorId) {
+      // Offensive Tethering to Opponent Hypersphere
+      if (entity.activeTether.targetEntityId && opponent && opponent.id === entity.activeTether.targetEntityId) {
+        // Defensive Phase-Shift: If opponent steps into W-space (|w| > 14), avatar collapses into point and sever tether!
+        if (Math.abs(opponent.w) > 14) {
+          entity.activeTether = null;
+        } else {
+          tx = opponent.x;
+          ty = opponent.y;
+          tz = opponent.z || 0;
+          tw = opponent.w || 0;
+        }
+      } else if (entity.activeTether.targetAnchorId) {
         const anchor = this.arena.anchors.find(a => a.id === entity.activeTether!.targetAnchorId);
         if (anchor && anchor.active) {
           tx = anchor.x;
@@ -307,9 +319,16 @@ export class CyberAthleticTethering {
             const ny = dy / (dist3D || 1);
             const nz = dz / (dist3D || 1);
 
-            entity.vx += nx * pullForce;
-            entity.vy += ny * pullForce;
-            entity.vz = (entity.vz || 0) + nz * pullForce;
+            // Hyper-Rotation Parry Check: Inverted trajectory pulls backward
+            if (entity.activeTether.isReversed) {
+              entity.vx -= nx * pullForce * 1.4;
+              entity.vy -= ny * pullForce * 1.4;
+              entity.vz = (entity.vz || 0) - nz * pullForce * 1.4;
+            } else {
+              entity.vx += nx * pullForce;
+              entity.vy += ny * pullForce;
+              entity.vz = (entity.vz || 0) + nz * pullForce;
+            }
 
             // Slingshot orbital cross-velocity
             const crossX = -ny * 0.18;
@@ -318,6 +337,14 @@ export class CyberAthleticTethering {
             entity.vy += crossY;
 
             entity.activeTether.tension = Math.min(1.0, dist3D / entity.activeTether.maxLength);
+
+            // Offensive Tethering Kinetic Shear: forces opponent engine to expend energy and get dragged
+            if (entity.activeTether.targetEntityId && opponent && opponent.id === entity.activeTether.targetEntityId) {
+              opponent.vx -= nx * pullForce * 0.72;
+              opponent.vy -= ny * pullForce * 0.72;
+              opponent.vz = (opponent.vz || 0) - nz * pullForce * 0.72;
+              opponent.energy = Math.max(0, opponent.energy - 0.42);
+            }
 
             // Small energy consumption for maintaining high-tension tether
             entity.energy = Math.max(0, entity.energy - 0.2);
