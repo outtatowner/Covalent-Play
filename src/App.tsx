@@ -47,7 +47,7 @@ import {
 
 export default function App() {
   // Engine Singletons initialized once
-  const arena = useMemo(() => new ArenaForge('NULL_FRICTION_OCTAGON'), []);
+  const arena = useMemo(() => new ArenaForge('CONTINUOUS_TRI_STATE_GAUNTLET'), []);
   const tetherEngine = useMemo(() => new CyberAthleticTethering(arena), [arena]);
   const beEngine = useMemo(() => new BeInstanceEngine(arena, tetherEngine), [arena, tetherEngine]);
   const rollbackSieve = useMemo(() => new CovalentRollbackSieve(arena), [arena]);
@@ -56,9 +56,9 @@ export default function App() {
   const [human, setHuman] = useState<Entity>(() => ({
     id: 'human_athlete_0',
     name: 'Human Vector',
-    x: 330,
+    x: 450,
     y: 350,
-    z: 0,
+    z: -210,
     w: 0,
     vx: 0,
     vy: 0,
@@ -91,7 +91,7 @@ export default function App() {
   const [audioEnabled, setAudioEnabled] = useState<boolean>(true);
   const [showBVH, setShowBVH] = useState<boolean>(false);
   const [showCoordinates, setShowCoordinates] = useState<boolean>(true);
-  const [selectedTopology, setSelectedTopology] = useState<TopologyType>('ISOTROPIC_HYPER_SPHERE');
+  const [selectedTopology, setSelectedTopology] = useState<TopologyType>('CONTINUOUS_TRI_STATE_GAUNTLET');
   const [compileFlash, setCompileFlash] = useState<boolean>(false);
 
   // Key state tracking
@@ -158,8 +158,11 @@ export default function App() {
         // 2. Apply Human 6DOF & 4D Input Thrust
         if (!human.isStasisLocked && !human.isBraking) {
           const thrust = 0.42;
-          const is3D = arena.topologyType === 'ISOTROPIC_HYPER_SPHERE' || arena.topologyType === 'THE_NULL_FRICTION_TESSERACT';
-          const isTesseract = arena.topologyType === 'THE_NULL_FRICTION_TESSERACT';
+          const is3D = arena.topologyType === 'ISOTROPIC_HYPER_SPHERE' ||
+            arena.topologyType === 'THE_NULL_FRICTION_TESSERACT' ||
+            arena.topologyType === 'CONTINUOUS_TRI_STATE_GAUNTLET';
+          const isTesseract = arena.topologyType === 'THE_NULL_FRICTION_TESSERACT' ||
+            arena.topologyType === 'CONTINUOUS_TRI_STATE_GAUNTLET';
 
           // Planar XY Thrust
           if (keysPressed.current['w'] || keysPressed.current['arrowup']) human.vy -= thrust;
@@ -211,7 +214,8 @@ export default function App() {
         tetherEngine.tickEntity(beEngine.entity);
 
         // Organelle 0xB6: Tick 4D Hyper-Physics & W-Axis Thermodynamic Vacuum Bleed
-        const isTesseractArena = arena.topologyType === 'THE_NULL_FRICTION_TESSERACT';
+        const isTesseractArena = arena.topologyType === 'THE_NULL_FRICTION_TESSERACT' ||
+          arena.topologyType === 'CONTINUOUS_TRI_STATE_GAUNTLET';
         if (isTesseractArena) {
           phaseOfficiator.tickHyperPhysics(human, 0, t);
           phaseOfficiator.tickHyperPhysics(beEngine.entity, human.w || 0, t);
@@ -271,7 +275,53 @@ export default function App() {
   const handleTopologySelect = (type: TopologyType) => {
     setSelectedTopology(type);
     arena.setTopology(type);
+    if (type === 'CONTINUOUS_TRI_STATE_GAUNTLET') {
+      human.x = arena.center.x;
+      human.y = arena.center.y;
+      human.z = -210;
+      human.w = 0;
+      human.vx = 0;
+      human.vy = 0;
+      human.vz = 0;
+      human.vw = 0;
+      beEngine.entity.x = arena.center.x;
+      beEngine.entity.y = arena.center.y;
+      beEngine.entity.z = -170;
+      beEngine.entity.w = 0;
+      beEngine.entity.vx = 0;
+      beEngine.entity.vy = 0;
+      beEngine.entity.vz = 0;
+      beEngine.entity.vw = 0;
+      beEngine.sys_covalent_tick_gauntlet(human, tickRef.current);
+    }
     cyberAudio.playResonanceChime();
+  };
+
+  // Dedicated Continuous Tri-State Gauntlet Compile
+  const handleContinuousGauntletCompile = () => {
+    setSelectedTopology('CONTINUOUS_TRI_STATE_GAUNTLET');
+    arena.rebuildTopology('CONTINUOUS_TRI_STATE_GAUNTLET');
+    human.x = arena.center.x;
+    human.y = arena.center.y;
+    human.z = -210;
+    human.w = 0;
+    human.vx = 0;
+    human.vy = 0;
+    human.vz = 0;
+    human.vw = 0;
+    beEngine.entity.x = arena.center.x;
+    beEngine.entity.y = arena.center.y;
+    beEngine.entity.z = -170;
+    beEngine.entity.w = 0;
+    beEngine.entity.vx = 0;
+    beEngine.entity.vy = 0;
+    beEngine.entity.vz = 0;
+    beEngine.entity.vw = 0;
+    beEngine.sys_covalent_tick_gauntlet(human, tickRef.current);
+    cyberAudio.playConstructiveResonance();
+    beEngine.addLog('MANIFOLD COMPILE: ORGANELLE 0xC0 CONTINUOUS TRI-STATE GAUNTLET // Ascent -> Breach -> Apex hot-swap online', 'SYS', tickRef.current);
+    setCompileFlash(true);
+    setTimeout(() => setCompileFlash(false), 900);
   };
 
   // Dedicated Manifold Compile for Null-Friction Octagon
@@ -423,6 +473,20 @@ export default function App() {
 
         {/* Action Controls & Topologies */}
         <div className="flex flex-wrap items-center gap-2 font-mono text-xs">
+          {/* Organelle 0xC0: Continuous Tri-State Gauntlet Action */}
+          <button
+            onClick={handleContinuousGauntletCompile}
+            title="Organelle 0xC0_COVALENT: The Continuous Tri-State Gauntlet (Ascent -> Breach -> Apex)"
+            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg font-bold transition-all cursor-pointer border ${
+              selectedTopology === 'CONTINUOUS_TRI_STATE_GAUNTLET'
+                ? 'bg-gradient-to-r from-emerald-600 via-sky-600 to-rose-600 text-white border-white shadow-lg shadow-sky-500/40 scale-105 ring-1 ring-cyan-300'
+                : 'bg-gradient-to-r from-[#061826] to-[#122b3b] hover:from-sky-900 hover:to-emerald-900 text-sky-300 border-sky-500/60 shadow-md'
+            }`}
+          >
+            <Zap className="w-3.5 h-3.5 text-amber-400 animate-pulse" />
+            <span>0xC0 CONTINUOUS GAUNTLET</span>
+          </button>
+
           {/* 4D Tesseract Expansion Action */}
           <button
             onClick={handleTesseractExpansion}
@@ -467,6 +531,14 @@ export default function App() {
 
           {/* Topology Selector */}
           <div className="flex bg-[#05070c] p-1 rounded-lg border border-[#1e293b]">
+            <button
+              onClick={() => handleTopologySelect('CONTINUOUS_TRI_STATE_GAUNTLET')}
+              className={`px-2.5 py-1 rounded transition-colors cursor-pointer text-[11px] ${
+                selectedTopology === 'CONTINUOUS_TRI_STATE_GAUNTLET' ? 'bg-gradient-to-r from-emerald-600 to-sky-600 text-white font-bold' : 'text-slate-400 hover:text-white'
+              }`}
+            >
+              Gauntlet (0xC0)
+            </button>
             <button
               onClick={() => handleTopologySelect('THE_NULL_FRICTION_TESSERACT')}
               className={`px-2.5 py-1 rounded transition-colors cursor-pointer text-[11px] ${
@@ -773,8 +845,17 @@ export default function App() {
           <div className="lg:col-span-1">
             <BeInstanceArbitrator
               beEngine={beEngine}
+              human={human}
               currentTick={currentTick}
               onModeChange={handleBeModeChange}
+              onTriggerMacroDeformation={() => beEngine.triggerMacroDeformation(human, tickRef.current)}
+              onDeployTrap={() => beEngine.dropKineticTrap(human.x, human.y, human.z || 0, tickRef.current)}
+              onJumpSector={(zTarget) => {
+                human.z = zTarget;
+                human.vz = 0;
+                beEngine.sys_covalent_tick_gauntlet(human, tickRef.current);
+                cyberAudio.playConstructiveResonance();
+              }}
             />
           </div>
         </div>

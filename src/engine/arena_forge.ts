@@ -6,6 +6,7 @@
 import { SplineHull, SplineControlPoint, TetherAnchor, BoundingBox, TopologyType } from '../types';
 import { CyberArenaSynthesizer, WELL_OFFSET_Q16 } from './arena_synthesizer';
 import { VolumetricArenaSynthesizer } from './omni_axial_arena';
+import { autopoieticGauntlet } from './gauntlet_synthesizer';
 
 export type { TopologyType };
 
@@ -13,7 +14,7 @@ export class ArenaForge {
   public hull: SplineHull;
   public anchors: TetherAnchor[] = [];
   public bvh: BoundingBox[] = [];
-  public topologyType: TopologyType = 'ISOTROPIC_HYPER_SPHERE';
+  public topologyType: TopologyType = 'CONTINUOUS_TRI_STATE_GAUNTLET';
   public center: { x: number; y: number } = { x: 450, y: 350 };
   public radiusX: number = 320;
   public radiusY: number = 240;
@@ -22,9 +23,23 @@ export class ArenaForge {
 
   public tesseractRotor: [number, number, number, number, number, number] = [0, 0, 0, 0.05, 0.03, 0];
 
-  constructor(topology: TopologyType = 'THE_NULL_FRICTION_TESSERACT') {
+  constructor(topology: TopologyType = 'CONTINUOUS_TRI_STATE_GAUNTLET') {
     this.topologyType = topology;
-    if (topology === 'THE_NULL_FRICTION_TESSERACT') {
+    if (topology === 'CONTINUOUS_TRI_STATE_GAUNTLET') {
+      const archive = autopoieticGauntlet.latestArchive || autopoieticGauntlet.compileSeamlessTrialSync();
+      this.hull = {
+        id: 'continuous_gauntlet_hull',
+        color: '#38bdf8',
+        points: [
+          ...archive.qbitAscentSplines.points,
+          ...archive.qbitBreachTesseract.points,
+          ...archive.qbitApexArena.points
+        ],
+        tension: 0.65,
+        friction: 0.012
+      };
+      this.synthesizeContinuousTriStateGauntlet();
+    } else if (topology === 'THE_NULL_FRICTION_TESSERACT') {
       this.hull = this.volumetricSynthesizer.generateHyperSphere(this.center.x, this.center.y, 0, this.radiusX * 1.1).hull;
       this.synthesizeNullFrictionTesseract();
     } else if (topology === 'ISOTROPIC_HYPER_SPHERE') {
@@ -39,7 +54,9 @@ export class ArenaForge {
 
   public setTopology(type: TopologyType): void {
     this.topologyType = type;
-    if (type === 'THE_NULL_FRICTION_TESSERACT') {
+    if (type === 'CONTINUOUS_TRI_STATE_GAUNTLET') {
+      this.synthesizeContinuousTriStateGauntlet();
+    } else if (type === 'THE_NULL_FRICTION_TESSERACT') {
       this.synthesizeNullFrictionTesseract();
     } else if (type === 'ISOTROPIC_HYPER_SPHERE') {
       this.synthesizeIsotropicHyperSphere();
@@ -50,6 +67,25 @@ export class ArenaForge {
       this.generateAnchors();
       this.recalculateBVH();
     }
+  }
+
+  public synthesizeContinuousTriStateGauntlet(): void {
+    this.topologyType = 'CONTINUOUS_TRI_STATE_GAUNTLET';
+    const archive = autopoieticGauntlet.latestArchive || autopoieticGauntlet.compileSeamlessTrialSync();
+    const allPts = [
+      ...archive.qbitAscentSplines.points,
+      ...archive.qbitBreachTesseract.points,
+      ...archive.qbitApexArena.points
+    ];
+    this.hull = {
+      id: 'continuous_gauntlet_hull',
+      color: '#38bdf8',
+      points: allPts,
+      tension: 0.65,
+      friction: 0.012
+    };
+    this.anchors = archive.anchors;
+    this.recalculateBVH();
   }
 
   public synthesizeNullFrictionTesseract(): void {

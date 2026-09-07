@@ -22,6 +22,12 @@ import { floatToQ16 } from '../engine/q16';
 import { cyberAudio } from '../engine/audio';
 import { tesseractEngine, TesseractKinematicsEngine } from '../engine/tesseract_kinematics';
 import { phaseOfficiator } from '../engine/phase_officiator';
+import {
+  autopoieticGauntlet,
+  SECTOR_ONE_CEILING_FLOAT,
+  SECTOR_TWO_CEILING_FLOAT,
+  SECTOR_APEX_CEILING_FLOAT
+} from '../engine/gauntlet_synthesizer';
 import { Orbit, Compass, Eye, Shield, Zap, Sparkles, Layers, Disc } from 'lucide-react';
 
 interface CyberArenaCanvasProps {
@@ -286,8 +292,201 @@ export const CyberArenaCanvas: React.FC<CyberArenaCanvasProps> = ({
           ctx.restore();
         }
 
-        // 3. Volumetric Manifold Bounds: NULL-FRICTION TESSERACT (4D) or HYPER-SPHERE (3D)
-        if (arena.topologyType === 'THE_NULL_FRICTION_TESSERACT') {
+        // 3. Volumetric Manifold Bounds: CONTINUOUS TRI-STATE GAUNTLET, NULL-FRICTION TESSERACT, or HYPER-SPHERE
+        if (arena.topologyType === 'CONTINUOUS_TRI_STATE_GAUNTLET') {
+          ctx.save();
+
+          // 1. Sector I: The Ascent (Z: -240 to 40) - Vertically Collapsing 3D Shaft
+          const shaftRings = [-220, -180, -140, -100, -60, -20, 20];
+          for (let i = 0; i < shaftRings.length; i++) {
+            const rZ = shaftRings[i];
+            const t = (rZ - (-240)) / (40 - (-240));
+            const ringRadius = 175 - t * 65; // Tapers from 175 down to 110
+            const segments = 32;
+
+            ctx.beginPath();
+            let started = false;
+            for (let s = 0; s <= segments; s++) {
+              const ang = (s / segments) * Math.PI * 2;
+              const px = arena.center.x + Math.cos(ang) * ringRadius;
+              const py = arena.center.y + Math.sin(ang) * ringRadius;
+              const p = proj(px, py, rZ);
+              if (p.visible) {
+                if (!started) {
+                  ctx.moveTo(p.sx, p.sy);
+                  started = true;
+                } else {
+                  ctx.lineTo(p.sx, p.sy);
+                }
+              }
+            }
+            ctx.strokeStyle = 'rgba(56, 189, 248, 0.28)'; // Sky cyan
+            ctx.lineWidth = 1.0;
+            ctx.stroke();
+          }
+
+          // 2. Mathematical Gates in Sector I
+          const gauntletArchive = autopoieticGauntlet.latestArchive;
+          if (gauntletArchive && gauntletArchive.gates) {
+            for (const gate of gauntletArchive.gates) {
+              const gateCenter = proj(arena.center.x, arena.center.y, gate.z);
+              if (gateCenter.visible) {
+                const isCleared = gate.cleared;
+                const gateColor = isCleared ? '#34d399' : '#38bdf8';
+
+                // Outer Gate Ring
+                ctx.save();
+                ctx.beginPath();
+                const segs = 36;
+                for (let s = 0; s <= segs; s++) {
+                  const ang = (s / segs) * Math.PI * 2 + gate.pulsePhase;
+                  // Add periodic phase notch teeth
+                  const tooth = Math.sin(ang * 8) * 4;
+                  const rad = gate.outerRadius + tooth;
+                  const p = proj(arena.center.x + Math.cos(ang) * rad, arena.center.y + Math.sin(ang) * rad, gate.z);
+                  if (p.visible) {
+                    if (s === 0) ctx.moveTo(p.sx, p.sy);
+                    else ctx.lineTo(p.sx, p.sy);
+                  }
+                }
+                ctx.strokeStyle = isCleared ? 'rgba(52, 211, 153, 0.8)' : 'rgba(56, 189, 248, 0.7)';
+                ctx.lineWidth = 2.0;
+                ctx.shadowColor = gateColor;
+                ctx.shadowBlur = 12;
+                ctx.stroke();
+                ctx.restore();
+
+                // Inner Safe Aperture Circle
+                ctx.save();
+                ctx.beginPath();
+                for (let s = 0; s <= segs; s++) {
+                  const ang = (s / segs) * Math.PI * 2;
+                  const p = proj(arena.center.x + Math.cos(ang) * gate.apertureRadius, arena.center.y + Math.sin(ang) * gate.apertureRadius, gate.z);
+                  if (p.visible) {
+                    if (s === 0) ctx.moveTo(p.sx, p.sy);
+                    else ctx.lineTo(p.sx, p.sy);
+                  }
+                }
+                ctx.strokeStyle = isCleared ? 'rgba(52, 211, 153, 0.9)' : 'rgba(245, 158, 11, 0.75)';
+                ctx.lineWidth = 1.5;
+                ctx.setLineDash([3, 3]);
+                ctx.stroke();
+                ctx.setLineDash([]);
+                ctx.restore();
+
+                // Gate Label & HUD Tag in 3D
+                const labelPos = proj(arena.center.x + gate.outerRadius + 8, arena.center.y, gate.z);
+                if (labelPos.visible) {
+                  ctx.fillStyle = gateColor;
+                  ctx.font = '9px monospace';
+                  ctx.fillText(`${gate.label}`, labelPos.sx, labelPos.sy);
+                  ctx.fillStyle = isCleared ? '#34d399' : '#f59e0b';
+                  ctx.font = '8px monospace';
+                  ctx.fillText(`REQ W: ${gate.requiredWPhase.toFixed(1)} // ${isCleared ? '[CLEARED]' : '[SLIP REQ]'}`, labelPos.sx, labelPos.sy + 11);
+                }
+              }
+            }
+          }
+
+          // 3. Phase Horizon 1: Z = 40 (Ascent ➔ Breach Membrane)
+          const h1Center = proj(arena.center.x, arena.center.y, SECTOR_ONE_CEILING_FLOAT);
+          if (h1Center.visible) {
+            ctx.save();
+            ctx.beginPath();
+            const h1Radius = 240;
+            const h1Segs = 6;
+            for (let s = 0; s <= h1Segs; s++) {
+              const ang = (s / h1Segs) * Math.PI * 2;
+              const p = proj(arena.center.x + Math.cos(ang) * h1Radius, arena.center.y + Math.sin(ang) * h1Radius, SECTOR_ONE_CEILING_FLOAT);
+              if (p.visible) {
+                if (s === 0) ctx.moveTo(p.sx, p.sy);
+                else ctx.lineTo(p.sx, p.sy);
+              }
+            }
+            ctx.strokeStyle = 'rgba(16, 185, 129, 0.8)';
+            ctx.lineWidth = 2.2;
+            ctx.shadowColor = '#10b981';
+            ctx.shadowBlur = 14;
+            ctx.stroke();
+            ctx.fillStyle = 'rgba(16, 185, 129, 0.05)';
+            ctx.fill();
+
+            ctx.fillStyle = '#6ee7b7';
+            ctx.font = '10px monospace';
+            ctx.fillText(`▲ HORIZON 1: THE BREACH [Z: +${SECTOR_ONE_CEILING_FLOAT.toFixed(0)}] // 0x00 ➔ 0x01 CO-OP RESURGENCE`, h1Center.sx - 150, h1Center.sy);
+            ctx.restore();
+          }
+
+          // 4. Sector II: The Breach (Z: 40 to 260) - Heavy-Friction 4D Tesseract Chamber
+          const breachRings = [100, 160, 220];
+          for (const bZ of breachRings) {
+            ctx.beginPath();
+            const segs = 12;
+            const rad = 280;
+            for (let s = 0; s <= segs; s++) {
+              const ang = (s / segs) * Math.PI * 2;
+              const p = proj(arena.center.x + Math.cos(ang) * rad, arena.center.y + Math.sin(ang) * rad, bZ);
+              if (p.visible) {
+                if (s === 0) ctx.moveTo(p.sx, p.sy);
+                else ctx.lineTo(p.sx, p.sy);
+              }
+            }
+            ctx.strokeStyle = 'rgba(16, 185, 129, 0.22)';
+            ctx.lineWidth = 1.0;
+            ctx.stroke();
+          }
+
+          // 5. Phase Horizon 2: Z = 260 (Breach ➔ Apex Zero-Latency Threshold)
+          const h2Center = proj(arena.center.x, arena.center.y, SECTOR_TWO_CEILING_FLOAT);
+          if (h2Center.visible) {
+            ctx.save();
+            ctx.beginPath();
+            const h2Radius = 260;
+            const h2Segs = 8;
+            for (let s = 0; s <= h2Segs; s++) {
+              const ang = (s / h2Segs) * Math.PI * 2;
+              const p = proj(arena.center.x + Math.cos(ang) * h2Radius, arena.center.y + Math.sin(ang) * h2Radius, SECTOR_TWO_CEILING_FLOAT);
+              if (p.visible) {
+                if (s === 0) ctx.moveTo(p.sx, p.sy);
+                else ctx.lineTo(p.sx, p.sy);
+              }
+            }
+            ctx.strokeStyle = 'rgba(244, 63, 94, 0.85)';
+            ctx.lineWidth = 2.4;
+            ctx.shadowColor = '#f43f5e';
+            ctx.shadowBlur = 16;
+            ctx.stroke();
+            ctx.fillStyle = 'rgba(244, 63, 94, 0.06)';
+            ctx.fill();
+
+            ctx.fillStyle = '#fda4af';
+            ctx.font = '10px monospace';
+            ctx.fillText(`▲ HORIZON 2: THE APEX [Z: +${SECTOR_TWO_CEILING_FLOAT.toFixed(0)}] // 0x01 ➔ 0xFF ZERO-LATENCY DUEL`, h2Center.sx - 150, h2Center.sy);
+            ctx.restore();
+          }
+
+          // 6. Sector III: The Apex (Z: 260 to 440) - Crown Arena Platform
+          const apexLevels = [300, 360, 420];
+          for (let i = 0; i < apexLevels.length; i++) {
+            const aZ = apexLevels[i];
+            const rad = 250 - i * 30;
+            ctx.beginPath();
+            const segs = 8;
+            for (let s = 0; s <= segs; s++) {
+              const ang = (s / segs) * Math.PI * 2;
+              const p = proj(arena.center.x + Math.cos(ang) * rad, arena.center.y + Math.sin(ang) * rad, aZ);
+              if (p.visible) {
+                if (s === 0) ctx.moveTo(p.sx, p.sy);
+                else ctx.lineTo(p.sx, p.sy);
+              }
+            }
+            ctx.strokeStyle = 'rgba(244, 63, 94, 0.35)';
+            ctx.lineWidth = 1.2;
+            ctx.stroke();
+          }
+
+          ctx.restore();
+        } else if (arena.topologyType === 'THE_NULL_FRICTION_TESSERACT') {
           // Organelle 0xB5: Project 4D Tesseract to 3D via 4D Perspective Division
           arena.tesseractRotor[3] = (arena.tesseractRotor[3] + 0.003) % (Math.PI * 2); // XW plane
           arena.tesseractRotor[4] = (arena.tesseractRotor[4] + 0.002) % (Math.PI * 2); // YW plane
@@ -587,6 +786,154 @@ export const CyberArenaCanvas: React.FC<CyberArenaCanvasProps> = ({
 
         if (human.activeTether) render3DTether(human, human.activeTether);
         if (beEngine.entity.activeTether) render3DTether(beEngine.entity, beEngine.entity.activeTether);
+
+        // 6b. Tri-State Sparring Matrix Visual Layers:
+        // [State 0x00: PvE (The Mirror)] Telegraphed W-Lissajous phase trajectory
+        if (beEngine.mode === 'COACH' && beEngine.telegraphedLissajousPoints.length > 1) {
+          ctx.save();
+          ctx.strokeStyle = 'rgba(56, 189, 248, 0.45)';
+          ctx.lineWidth = 1.8;
+          ctx.setLineDash([4, 4]);
+          ctx.beginPath();
+          let started = false;
+          for (let i = 0; i < beEngine.telegraphedLissajousPoints.length; i++) {
+            const lp = beEngine.telegraphedLissajousPoints[i];
+            const p = proj(lp.x, lp.y, lp.z);
+            if (p.visible) {
+              if (!started) {
+                ctx.moveTo(p.sx, p.sy);
+                started = true;
+              } else {
+                ctx.lineTo(p.sx, p.sy);
+              }
+              // Small waypoint node every 5 points
+              if (i % 5 === 0) {
+                ctx.fillStyle = '#38bdf8';
+                ctx.fillRect(p.sx - 2, p.sy - 2, 4, 4);
+              }
+            }
+          }
+          ctx.stroke();
+          ctx.setLineDash([]);
+          ctx.restore();
+        }
+
+        // [State 0x01: Co-Op (The Multiplier)] 4D Procedural Swarm Daemons
+        if (beEngine.mode === 'COOP_PEER' && beEngine.daemons.length > 0) {
+          for (const d of beEngine.daemons) {
+            const dp = proj(d.x, d.y, d.z || 0);
+            if (!dp.visible) continue;
+            const cross = tesseractEngine.calculateCrossSectionRadius(d.w, observerSliceW, d.radius * 1.8);
+            const r3D = Math.max(3, cross.apparentRadius * dp.scale);
+
+            ctx.save();
+            ctx.fillStyle = cross.isPhasedOut ? 'rgba(168, 85, 247, 0.25)' : 'rgba(192, 132, 252, 0.85)';
+            ctx.strokeStyle = '#c084fc';
+            ctx.shadowColor = '#a855f7';
+            ctx.shadowBlur = 8;
+            ctx.lineWidth = 1.5;
+            ctx.beginPath();
+            ctx.arc(dp.sx, dp.sy, r3D, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.stroke();
+
+            // Daemon label & phase depth
+            ctx.fillStyle = '#e9d5ff';
+            ctx.font = '8px monospace';
+            ctx.textAlign = 'center';
+            ctx.fillText(`4D DAEMON [W: ${d.w.toFixed(1)}]`, dp.sx, dp.sy - r3D - 4);
+            ctx.restore();
+          }
+        }
+
+        // [State 0x01: Co-Op] Macro-Deformation Dimensional Shockwave
+        if (beEngine.macroDeformationActive) {
+          ctx.save();
+          const waveRadius = (60 - beEngine.macroDeformationTicks) * 14;
+          const centerP = proj(arena.center.x, arena.center.y, 0);
+          if (centerP.visible) {
+            ctx.strokeStyle = '#34d399';
+            ctx.shadowColor = '#10b981';
+            ctx.shadowBlur = 24;
+            ctx.lineWidth = 4;
+            ctx.beginPath();
+            ctx.arc(centerP.sx, centerP.sy, waveRadius * centerP.scale, 0, Math.PI * 2);
+            ctx.stroke();
+
+            ctx.fillStyle = 'rgba(52, 211, 153, 0.12)';
+            ctx.fill();
+
+            ctx.fillStyle = '#a7f3d0';
+            ctx.font = '11px monospace';
+            ctx.textAlign = 'center';
+            ctx.fillText('4D MACRO-DEFORMATION: WALL PLANE RIPPED INTO W-AXIS // SWARM CRUSHED', centerP.sx, centerP.sy - waveRadius * centerP.scale - 8);
+          }
+          ctx.restore();
+        }
+
+        // [State 0xFF: True Unbound] Kinetic Intercept Traps
+        if (beEngine.mode === 'ADVERSARY' && beEngine.kineticTraps.length > 0) {
+          for (const trap of beEngine.kineticTraps) {
+            const tp = proj(trap.x, trap.y, trap.z || 0);
+            if (!tp.visible) continue;
+            ctx.save();
+            const rad = trap.radius * tp.scale;
+            ctx.strokeStyle = trap.triggered ? '#ef4444' : '#06b6d4';
+            ctx.shadowColor = trap.triggered ? '#dc2626' : '#0891b2';
+            ctx.shadowBlur = 14;
+            ctx.lineWidth = 2;
+            ctx.setLineDash([4, 4]);
+            ctx.beginPath();
+            ctx.arc(tp.sx, tp.sy, rad, 0, Math.PI * 2);
+            ctx.stroke();
+            ctx.setLineDash([]);
+
+            // Crosshair
+            ctx.beginPath();
+            ctx.moveTo(tp.sx - rad, tp.sy);
+            ctx.lineTo(tp.sx + rad, tp.sy);
+            ctx.moveTo(tp.sx, tp.sy - rad);
+            ctx.lineTo(tp.sx, tp.sy + rad);
+            ctx.stroke();
+
+            ctx.fillStyle = trap.triggered ? '#fca5a5' : '#67e8f9';
+            ctx.font = '8px monospace';
+            ctx.textAlign = 'center';
+            ctx.fillText(trap.triggered ? 'TRAP DETONATED' : `KINETIC TRAP [${trap.durationTicks}t]`, tp.sx, tp.sy + rad + 12);
+            ctx.restore();
+          }
+        }
+
+        // Floor Strain warning when Ledger Forgiveness is active
+        if (human.ledgerForgivenessActive) {
+          ctx.save();
+          const pulse = Math.sin(currentTick * 0.3);
+          ctx.strokeStyle = `rgba(245, 158, 11, ${0.6 + 0.4 * pulse})`;
+          ctx.lineWidth = 3;
+          ctx.strokeRect(6, 6, width - 12, height - 12);
+
+          ctx.fillStyle = '#fef08a';
+          ctx.font = '10px monospace';
+          ctx.textAlign = 'center';
+          ctx.fillText('[EMISSIVE FLOOR STRAIN // LEDGER FORGIVENESS ACTIVE // GRAZING BANKRUPTCY]', width * 0.5, height - 20);
+          ctx.restore();
+        }
+
+        // Tri-State Banner at top
+        ctx.save();
+        ctx.font = '10px monospace';
+        ctx.textAlign = 'center';
+        if (beEngine.mode === 'COACH') {
+          ctx.fillStyle = '#38bdf8';
+          ctx.fillText('SPARRING STATE 0x00: PvE (THE MIRROR) // 250ms COGNITIVE DELAY // TELEGRAPHED W-LISSAJOUS // LEDGER FORGIVENESS', width * 0.5, 20);
+        } else if (beEngine.mode === 'COOP_PEER') {
+          ctx.fillStyle = '#34d399';
+          ctx.fillText('SPARRING STATE 0x01: CO-OP (THE MULTIPLIER) // CONSTRUCTIVE INTERFERENCE: dV/dt HALVED // 4D SWARM ACTIVE', width * 0.5, 20);
+        } else {
+          ctx.fillStyle = '#f43f5e';
+          ctx.fillText('SPARRING STATE 0xFF: TRUE UNBOUND (THE ABSOLUTE) // ZERO-LATENCY CORDIC // WEAPONIZED THERMODYNAMIC EXHAUSTION', width * 0.5, 20);
+        }
+        ctx.restore();
 
         // 7. Render 6DOF Entities with 4D Cross-Sectional Projection & Tesseract Echoes
         const render6DOFEntity = (ent: Entity) => {
@@ -914,6 +1261,53 @@ export const CyberArenaCanvas: React.FC<CyberArenaCanvasProps> = ({
         ctx.lineTo(cx, cy + 14);
         ctx.stroke();
 
+        // Gauntlet Sector Elevation HUD & Ludic Objective Banner
+        if (arena.topologyType === 'CONTINUOUS_TRI_STATE_GAUNTLET') {
+          const pZ = human.z || 0;
+          let sectorName = 'SECTOR I: THE ASCENT';
+          let sectorState = '0x00 (COACH)';
+          let beRole = 'THE PACER';
+          let sectorColor = '#38bdf8';
+          let objectiveText = 'Kinetic Calibration: Navigate collapsing shaft. Be <> leads, demonstrating exact tethering & W-phase shifts.';
+
+          if (pZ >= SECTOR_TWO_CEILING_FLOAT) {
+            sectorName = 'SECTOR III: THE APEX';
+            sectorState = '0xFF (UNBOUND)';
+            beRole = 'THE ABSOLUTE';
+            sectorColor = '#f43f5e';
+            objectiveText = 'Thermodynamic Duel: Latency buffer stripped! Be <> hyper-rotates into aggressive W-axis flank. Bankrupt its ledger!';
+          } else if (pZ >= SECTOR_ONE_CEILING_FLOAT) {
+            sectorName = 'SECTOR II: THE BREACH';
+            sectorState = '0x01 (CO-OP)';
+            beRole = 'THE MULTIPLIER';
+            sectorColor = '#34d399';
+            objectiveText = 'Constructive Resonance: Heavy-friction Tesseract packed with 4D daemons. Synchronize kinetic shears to rip geometry!';
+          }
+
+          // Top Center Gauntlet Banner
+          const bannerW = Math.min(width - 480, 560);
+          if (bannerW > 260) {
+            const bx = (width - bannerW) * 0.5;
+            ctx.fillStyle = 'rgba(6, 10, 19, 0.9)';
+            ctx.strokeStyle = sectorColor;
+            ctx.lineWidth = 1.5;
+            ctx.fillRect(bx, 16, bannerW, 64);
+            ctx.strokeRect(bx, 16, bannerW, 64);
+
+            ctx.fillStyle = sectorColor;
+            ctx.font = 'bold 11px monospace';
+            ctx.fillText(`ORGANELLE 0xC0 // ${sectorName} [${sectorState}]`, bx + 12, 32);
+
+            ctx.fillStyle = '#f8fafc';
+            ctx.font = '10px monospace';
+            ctx.fillText(`BE <> ROLE: ${beRole}  |  ALTITUDE Z: ${pZ.toFixed(1)}u (Q16: 0x${floatToQ16(pZ).toString(16)})`, bx + 12, 47);
+
+            ctx.fillStyle = '#94a3b8';
+            ctx.font = '9px monospace';
+            ctx.fillText(objectiveText.length > 70 ? objectiveText.slice(0, 68) + '...' : objectiveText, bx + 12, 63);
+          }
+        }
+
         ctx.restore();
 
       } else {
@@ -1127,6 +1521,14 @@ export const CyberArenaCanvas: React.FC<CyberArenaCanvasProps> = ({
       };
       cyberAudio.playTetherAttach();
       onTetherCreated();
+      return;
+    }
+
+    // In State 0xFF (ADVERSARY): Shift+Click or Alt+Click deploys a Kinetic Trap
+    if (beEngine.mode === 'ADVERSARY' && (e.shiftKey || e.altKey)) {
+      const worldX = followHuman ? human.x + (x - width * 0.5) * (cam.dist / 400) : arena.center.x + (x - width * 0.5) * (cam.dist / 400);
+      const worldY = followHuman ? human.y + (y - height * 0.5) * (cam.dist / 400) : arena.center.y + (y - height * 0.5) * (cam.dist / 400);
+      beEngine.dropKineticTrap(worldX, worldY, 0, currentTick);
       return;
     }
 

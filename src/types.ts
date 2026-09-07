@@ -57,6 +57,7 @@ export interface GravityVector3D {
 }
 
 export type TopologyType =
+  | 'CONTINUOUS_TRI_STATE_GAUNTLET'
   | 'THE_NULL_FRICTION_TESSERACT'
   | 'ISOTROPIC_HYPER_SPHERE'
   | 'NULL_FRICTION_OCTAGON'
@@ -64,7 +65,77 @@ export type TopologyType =
   | 'HYPER_TOROID'
   | 'KLEIN_LATTICE';
 
+export type GauntletSectorId = 'SECTOR_I_ASCENT' | 'SECTOR_II_BREACH' | 'SECTOR_III_APEX';
+
+export interface MathematicalGate {
+  id: string;
+  z: number;
+  outerRadius: number;
+  apertureRadius: number;
+  requiredWPhase: number;
+  label: string;
+  cleared: boolean;
+  pulsePhase: number;
+}
+
+export interface GauntletSectorInfo {
+  id: GauntletSectorId;
+  name: string;
+  romanNumeral: string;
+  manifoldState: BeStateMode;
+  code: string;
+  ludicObjective: string;
+  beRole: string;
+  zMin: number;
+  zMax: number;
+  zCeilingQ16: number;
+  frictionBaseline: number;
+  activeObjectiveCleared: boolean;
+}
+
+export interface VectorQuadbitArchive {
+  hash: string;
+  sectors: GauntletSectorInfo[];
+  gates: MathematicalGate[];
+  qbitAscentSplines: SplineHull;
+  qbitBreachTesseract: SplineHull;
+  qbitApexArena: SplineHull;
+  anchors: TetherAnchor[];
+  timestamp: number;
+}
+
 export type BeStateMode = 'COACH' | 'COOP_PEER' | 'ADVERSARY';
+
+export interface PhasedDaemon {
+  id: string;
+  x: number;
+  y: number;
+  z: number;
+  w: number;
+  vx: number;
+  vy: number;
+  vz: number;
+  vw: number;
+  radius: number;
+  apparentRadius3D: number;
+  health: number;
+  maxHealth: number;
+  color: string;
+}
+
+export interface KineticTrap {
+  id: string;
+  x: number;
+  y: number;
+  z: number;
+  w?: number;
+  radius: number;
+  durationTicks: number;
+  maxDurationTicks: number;
+  color: string;
+  triggered: boolean;
+  armedTick: number;
+}
 
 export interface SplineControlPoint {
   id: string;
@@ -90,6 +161,7 @@ export interface SplineHull {
   material?: 'MATERIAL_TRANSLUCENT_GLASS' | 'DEFAULT';
   refractionIndex?: number;
   sphericalRadius?: number;
+  friction?: number;
 }
 
 export interface BoundingBox {
@@ -172,6 +244,13 @@ export interface Entity {
   stasisLockRemainingTicks: number; // 180 ticks = 3 sec penalty
   isStasisLocked: boolean;
   isBraking?: boolean; // Thermodynamic brake engaged
+  ledgerForgivenessActive?: boolean; // State 0x00: Grazing thermodynamic bankruptcy grace buffer
+  forgivenessGraceTicks?: number;
+  floorStrainLevel?: number; // 0 to 1 floor grid strain warning
+  consecutiveHyperRotations?: number; // State 0xFF: Tracking rapid hyper-rotations for thermodynamic exhaustion
+  tetherResonanceActive?: boolean; // State 0x01: Tether phase alignment (dV/dt cost halved)
+  macroDeformationActive?: boolean; // State 0x01: Wall plane ripped into W-axis to crush swarm
+  macroDeformationWaveZ?: number;
   color: string;
   trail: FloatVector[];
   trail3D: FloatVector3D[];

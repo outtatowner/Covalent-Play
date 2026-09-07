@@ -256,6 +256,98 @@ class CyberAudioEngine {
       osc.stop(this.ctx!.currentTime + 0.28);
     });
   }
+
+  public playConstructiveResonance() {
+    if (!this.enabled) return;
+    this.initCtx();
+    if (!this.ctx) return;
+
+    // Harmonic chord with 5th and octave
+    const freqs = [440, 554.37, 659.25, 880];
+    freqs.forEach((f, idx) => {
+      const osc = this.ctx!.createOscillator();
+      const gain = this.ctx!.createGain();
+
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(f, this.ctx!.currentTime);
+      osc.frequency.linearRampToValueAtTime(f * 1.05, this.ctx!.currentTime + 0.35);
+
+      gain.gain.setValueAtTime(0.08 / (idx + 1), this.ctx!.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.001, this.ctx!.currentTime + 0.4);
+
+      osc.connect(gain);
+      gain.connect(this.ctx!.destination);
+
+      osc.start();
+      osc.stop(this.ctx!.currentTime + 0.4);
+    });
+  }
+
+  public playMacroDeformationCrush() {
+    if (!this.enabled) return;
+    this.initCtx();
+    if (!this.ctx) return;
+
+    const osc = this.ctx.createOscillator();
+    const gain = this.ctx.createGain();
+
+    osc.type = 'sawtooth';
+    osc.frequency.setValueAtTime(90, this.ctx.currentTime);
+    osc.frequency.exponentialRampToValueAtTime(30, this.ctx.currentTime + 0.45);
+
+    gain.gain.setValueAtTime(0.2, this.ctx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.001, this.ctx.currentTime + 0.45);
+
+    osc.connect(gain);
+    gain.connect(this.ctx.destination);
+
+    osc.start();
+    osc.stop(this.ctx.currentTime + 0.45);
+  }
+
+  public playKineticTrapDeploy() {
+    if (!this.enabled) return;
+    this.initCtx();
+    if (!this.ctx) return;
+
+    const osc = this.ctx.createOscillator();
+    const gain = this.ctx.createGain();
+
+    osc.type = 'triangle';
+    osc.frequency.setValueAtTime(987.77, this.ctx.currentTime);
+    osc.frequency.exponentialRampToValueAtTime(1975.53, this.ctx.currentTime + 0.1);
+
+    gain.gain.setValueAtTime(0.1, this.ctx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.001, this.ctx.currentTime + 0.15);
+
+    osc.connect(gain);
+    gain.connect(this.ctx.destination);
+
+    osc.start();
+    osc.stop(this.ctx.currentTime + 0.15);
+  }
+
+  public playThermodynamicBankruptcy() {
+    if (!this.enabled) return;
+    this.initCtx();
+    if (!this.ctx) return;
+
+    const osc = this.ctx.createOscillator();
+    const gain = this.ctx.createGain();
+
+    osc.type = 'sawtooth';
+    osc.frequency.setValueAtTime(260, this.ctx.currentTime);
+    osc.frequency.linearRampToValueAtTime(40, this.ctx.currentTime + 0.5);
+
+    gain.gain.setValueAtTime(0.25, this.ctx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.001, this.ctx.currentTime + 0.5);
+
+    osc.connect(gain);
+    gain.connect(this.ctx.destination);
+
+    osc.start();
+    osc.stop(this.ctx.currentTime + 0.5);
+  }
 }
 
 export const cyberAudio = new CyberAudioEngine();
