@@ -1,6 +1,6 @@
 {
   "name": "Covalent-Play",
-  "description": "Zero-latency deterministic cyber-athletics engine featuring 4D Rollback Netcode, Vector Tethering physics, Tri-State Sparring Partner Be-Instance, and Organelle 0xC6 Bidirectional FORGE Pipeline.",
+  "description": "Zero-latency deterministic cyber-athletics engine featuring 4D Rollback Netcode, Organelle 0xC6 Bidirectional FORGE Pipeline, and Organelle 0xC7 Heritage Play Shard with dual viewports and 1===1 clamped dynamics.",
   "requestFramePermissions": [],
   "majorCapabilities": [
     "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"

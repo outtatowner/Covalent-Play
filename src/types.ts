@@ -563,5 +563,50 @@ export interface BidirectionalForgeState {
   transpileCount: number;
 }
 
+// Organelle 0xC7_COVALENT: Heritage Play Shard & Strict Architectural Preservations
+export type HeritagePlayerNode = 'HUMAN' | 'BE_INSTANCE';
+
+export type WorkspaceTabMode = 'TAB_A_FORGE_TELEMETRY' | 'TAB_B_PLAYABLE_HERITAGE';
+
+export interface HeritageLedgerBlock {
+  scoreQ16: number; // Discrete Q16.16 integer score
+  hpQ16: number;    // Discrete Q16.16 hitpoints (100.0 => 0x00640000)
+  armorQ16: number; // Discrete Q16.16 armor (50.0 => 0x00320000)
+  ammoBullets: number;
+  ammoShells: number;
+  ammoRockets: number;
+  ammoCells: number;
+  inventory: string[];
+  thermodynamicJoules: number;
+  highScoreChainHash: string;
+  speedrunTicks: number;
+  splits: { name: string; tick: number; deltaMs: number }[];
+  fragsCount: number;
+}
+
+export interface HeritageClampState {
+  wAxisLocked: boolean; // pos[3]=0, vel[3]=0
+  hyperRotorsDisabled: boolean; // XW, YW, ZW rotors zeroed out
+  legacyFriction: number;
+  maxMoveSpeed: number;
+  fovDegrees: number;
+  aspectRatio: '320x200' | '640x480' | '800x600';
+  crtScanlines: boolean;
+  ballisticsModel: 'HITSCAN_INSTANT' | 'PROJECTILE_DISCRETE_STEP';
+  hardwareTickRateFps: number; // e.g. 35 for Doom, 72 for Quake
+}
+
+export interface HeritagePlayState {
+  activeTab: WorkspaceTabMode;
+  mountedQbitPath: string;
+  playerNode: HeritagePlayerNode;
+  clamp: HeritageClampState;
+  ledger: HeritageLedgerBlock;
+  isEngineRunning: boolean;
+  autonomousAPM: number;
+  autonomousCurrentAction: string;
+  activeManifest: QbitArchiveManifest | null;
+}
+
 
 
