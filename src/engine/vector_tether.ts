@@ -11,6 +11,7 @@ import { Q16Vector, Entity, FloatVector, FloatVector4D } from '../types';
 import { floatToQ16, q16ToFloat } from './q16';
 import { ArenaForge } from './arena_forge';
 import { covalentBHMechanics } from './covalent_bh_mechanics';
+import { heritageSieveEngine } from './node_0xHERITAGE_OFFICIATOR';
 
 export interface ShearEvent {
   sourceId: string;
@@ -243,7 +244,7 @@ export class CyberAthleticTethering {
       let tz = 0;
       let tw = 0;
 
-      // Offensive Tethering to Opponent Hypersphere
+      // Offensive Tethering to Opponent Hypersphere or Heritage Entity
       if (entity.activeTether.targetEntityId && opponent && opponent.id === entity.activeTether.targetEntityId) {
         // Defensive Phase-Shift: If opponent steps into W-space (|w| > 14), avatar collapses into point and sever tether!
         if (Math.abs(opponent.w) > 14) {
@@ -253,6 +254,29 @@ export class CyberAthleticTethering {
           ty = opponent.y;
           tz = opponent.z || 0;
           tw = opponent.w || 0;
+          // Kinetic Shear burns opponent's ledger
+          if (opponent.energy > 0) {
+            opponent.energy = Math.max(0, opponent.energy - 0.45);
+          }
+        }
+      } else if (entity.activeTether.targetEntityId) {
+        // Check if tethered to a transpiled Heritage Entity
+        const heritageEnt = heritageSieveEngine.entities.find(e => e.id === entity.activeTether!.targetEntityId);
+        if (heritageEnt) {
+          if (Math.abs(heritageEnt.w) > 14) {
+            entity.activeTether = null;
+          } else {
+            tx = heritageEnt.x;
+            ty = heritageEnt.y;
+            tz = heritageEnt.z;
+            tw = heritageEnt.w;
+            // Drain heritage entity's thermodynamic ledger
+            heritageEnt.energy = Math.max(0, heritageEnt.energy - 1.2);
+            if (heritageEnt.energy <= 0 && !heritageEnt.isStasisLocked) {
+              heritageEnt.isStasisLocked = true;
+              heritageEnt.stasisLockRemainingTicks = 180;
+            }
+          }
         }
       } else if (entity.activeTether.targetAnchorId) {
         const anchor = this.arena.anchors.find(a => a.id === entity.activeTether!.targetAnchorId);
@@ -378,7 +402,13 @@ export class CyberAthleticTethering {
     }
 
     // Arena hull / Bounding Sphere collision deflection
-    if (is3D) {
+    if (this.arena.topologyType === 'HERITAGE_E1M1_HANGAR') {
+      // 4D W-Axis Phase Bypass:
+      // If |w| > 14, avatar steps into 4D and passes through legacy 3D walls!
+      if (Math.abs(entity.w || 0) <= 14) {
+        this.handleHeritageArenaCollisions(entity);
+      }
+    } else if (is3D) {
       this.handleSphericalArenaCollisions(entity);
     } else {
       this.handleArenaCollisions(entity);
@@ -425,6 +455,52 @@ export class CyberAthleticTethering {
         entity.vx = (entity.vx - 1.85 * dot * nx) * 0.92;
         entity.vy = (entity.vy - 1.85 * dot * ny) * 0.92;
         entity.vz = ((entity.vz || 0) - 1.85 * dot * nz) * 0.92;
+      }
+    }
+  }
+
+  /**
+   * Organelle 0xC3_COVALENT: Heritage E1M1 Collision
+   * Collides against lofted linedefs when anchored at baseline W (|w| <= 14).
+   */
+  private handleHeritageArenaCollisions(entity: Entity): void {
+    const archive = heritageSieveEngine.latestArchive;
+    if (!archive) {
+      this.handleArenaCollisions(entity);
+      return;
+    }
+
+    const radius = entity.boundingRadius || entity.radius || 16;
+    const linedefs = archive.linedefs;
+
+    for (const line of linedefs) {
+      const v1 = line.v1;
+      const v2 = line.v2;
+      const dx = v2.x - v1.x;
+      const dy = v2.y - v1.y;
+      const lenSq = dx * dx + dy * dy;
+      if (lenSq === 0) continue;
+
+      // Project entity position onto linedef segment
+      const t = Math.max(0, Math.min(1, ((entity.x - v1.x) * dx + (entity.y - v1.y) * dy) / lenSq));
+      const projX = v1.x + t * dx;
+      const projY = v1.y + t * dy;
+      const dist = Math.hypot(entity.x - projX, entity.y - projY);
+
+      if (dist < radius) {
+        const overlap = radius - dist;
+        const nx = (entity.x - projX) / (dist || 1);
+        const ny = (entity.y - projY) / (dist || 1);
+
+        entity.x += nx * overlap;
+        entity.y += ny * overlap;
+
+        // Bounce velocity
+        const dot = entity.vx * nx + entity.vy * ny;
+        if (dot < 0) {
+          entity.vx = (entity.vx - 1.8 * dot * nx) * 0.85;
+          entity.vy = (entity.vy - 1.8 * dot * ny) * 0.85;
+        }
       }
     }
   }

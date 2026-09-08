@@ -334,8 +334,53 @@ export default function App() {
       beEngine.entity.vw = 0;
       beEngine.setMode('TRUE_UNBOUND');
       beEngine.addLog('[FORGE] Organelle 0xC2_COVALENT: BH* Accretion Maze Extruded! [O1 = O2 = O3] Tautological congruence active.', 'BH*', tickRef.current);
+    } else if (type === 'HERITAGE_E1M1_HANGAR') {
+      arena.synthesizeHeritageE1M1Hangar();
+      human.x = arena.center.x - 120;
+      human.y = arena.center.y + 120;
+      human.z = 0;
+      human.w = 0;
+      human.vx = 0;
+      human.vy = 0;
+      human.vz = 0;
+      human.vw = 0;
+      beEngine.entity.x = arena.center.x + 120;
+      beEngine.entity.y = arena.center.y - 120;
+      beEngine.entity.z = 24;
+      beEngine.entity.w = 0;
+      beEngine.entity.vx = 0;
+      beEngine.entity.vy = 0;
+      beEngine.entity.vz = 0;
+      beEngine.entity.vw = 0;
+      beEngine.addLog('[HERITAGE] Organelle 0xC3: E1M1 Hangar lofted into 4D hyperspace. W-axis phase bypass active.', 'HERITAGE', tickRef.current);
     }
     cyberAudio.playResonanceChime();
+  };
+
+  // Dedicated Heritage Sieve E1M1 Hangar Compile (Organelle 0xC3)
+  const handleHeritageE1M1Compile = () => {
+    setSelectedTopology('HERITAGE_E1M1_HANGAR');
+    arena.synthesizeHeritageE1M1Hangar();
+    human.x = arena.center.x - 120;
+    human.y = arena.center.y + 120;
+    human.z = 0;
+    human.w = 0;
+    human.vx = 0;
+    human.vy = 0;
+    human.vz = 0;
+    human.vw = 0;
+    beEngine.entity.x = arena.center.x + 120;
+    beEngine.entity.y = arena.center.y - 120;
+    beEngine.entity.z = 24;
+    beEngine.entity.w = 0;
+    beEngine.entity.vx = 0;
+    beEngine.entity.vy = 0;
+    beEngine.entity.vz = 0;
+    beEngine.entity.vw = 0;
+    cyberAudio.playConstructiveResonance();
+    beEngine.addLog('MANIFOLD COMPILE: ORGANELLE 0xC3 HERITAGE SIEVE // E1M1 Hangar lofted into 4D Q16.16 vector-splines // Procedural Qbit shaders loaded', 'HERITAGE', tickRef.current);
+    setCompileFlash(true);
+    setTimeout(() => setCompileFlash(false), 900);
   };
 
   // Dedicated BH* Accretion Maze Compile (Hawking Radiation Extrusion)
@@ -542,6 +587,20 @@ export default function App() {
 
         {/* Action Controls & Topologies */}
         <div className="flex flex-wrap items-center gap-2 font-mono text-xs">
+          {/* Organelle 0xC3: Heritage Sieve E1M1 Hangar Action */}
+          <button
+            onClick={handleHeritageE1M1Compile}
+            title="Organelle 0xC3_COVALENT: Heritage Sieve (Loft E1M1 BSP into 4D Q16.16 Splines with Qbit Shaders)"
+            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg font-bold transition-all cursor-pointer border ${
+              selectedTopology === 'HERITAGE_E1M1_HANGAR'
+                ? 'bg-gradient-to-r from-amber-600 via-orange-600 to-emerald-600 text-white border-amber-300 shadow-lg shadow-amber-500/50 scale-105 ring-1 ring-amber-400'
+                : 'bg-gradient-to-r from-[#211709] to-[#2f1c0c] hover:from-amber-950 hover:to-emerald-950 text-amber-300 border-amber-500/60 shadow-md'
+            }`}
+          >
+            <Compass className="w-3.5 h-3.5 text-amber-400 animate-spin" />
+            <span>0xC3 HERITAGE E1M1</span>
+          </button>
+
           {/* Organelle 0xC2: BH* Accretion Maze Action */}
           <button
             onClick={handleBHAccretionCompile}
@@ -614,6 +673,14 @@ export default function App() {
 
           {/* Topology Selector */}
           <div className="flex bg-[#05070c] p-1 rounded-lg border border-[#1e293b]">
+            <button
+              onClick={() => handleTopologySelect('HERITAGE_E1M1_HANGAR')}
+              className={`px-2.5 py-1 rounded transition-colors cursor-pointer text-[11px] ${
+                selectedTopology === 'HERITAGE_E1M1_HANGAR' ? 'bg-gradient-to-r from-amber-600 to-emerald-600 text-white font-bold shadow-sm shadow-amber-500/50' : 'text-slate-400 hover:text-white'
+              }`}
+            >
+              E1M1 (0xC3)
+            </button>
             <button
               onClick={() => handleTopologySelect('BH_STAR_ACCRETION_DISK')}
               className={`px-2.5 py-1 rounded transition-colors cursor-pointer text-[11px] ${
@@ -768,7 +835,9 @@ export default function App() {
             <div className="flex items-center gap-1.5">
               <span className="text-slate-500">4D PHASE DEPTH (W):</span>
               <span className={Math.abs(human.w || 0) > 1 ? 'text-fuchsia-400 font-bold' : 'text-emerald-400'}>
-                {selectedTopology === 'THE_NULL_FRICTION_TESSERACT' ? `W=${(human.w || 0).toFixed(2)} [Phase Vacuum]` : 'W=0 (Locked)'}
+                {selectedTopology === 'THE_NULL_FRICTION_TESSERACT' || selectedTopology === 'HERITAGE_E1M1_HANGAR'
+                  ? `W=${(human.w || 0).toFixed(2)} ${Math.abs(human.w || 0) > 14 ? '[4D WALL BYPASS]' : '[Cross-Section]'}`
+                  : 'W=0 (Locked)'}
               </span>
             </div>
             <div className="flex items-center gap-1.5">
@@ -780,13 +849,21 @@ export default function App() {
             <div className="flex items-center gap-1.5">
               <span className="text-slate-500">WELLS:</span>
               <span className="text-cyan-300">
-                {selectedTopology === 'THE_NULL_FRICTION_TESSERACT' ? '6x 4D Orthogonal Thermodynamic Wells' : '4x 3D Lissajous Curves'}
+                {selectedTopology === 'THE_NULL_FRICTION_TESSERACT'
+                  ? '6x 4D Orthogonal Thermodynamic Wells'
+                  : selectedTopology === 'HERITAGE_E1M1_HANGAR'
+                  ? '4x E1M1 Quipus & Transpiled Hulls'
+                  : '4x 3D Lissajous Curves'}
               </span>
             </div>
             <div className="flex items-center gap-1.5">
               <span className="text-slate-500">KINEMATICS:</span>
               <span className="text-slate-200">
-                {selectedTopology === 'THE_NULL_FRICTION_TESSERACT' ? '6-Plane 4D CORDIC Rotors (XY,YZ,ZX,XW,YW,ZW)' : '6DOF CORDIC Pitch/Yaw/Roll'}
+                {selectedTopology === 'THE_NULL_FRICTION_TESSERACT'
+                  ? '6-Plane 4D CORDIC Rotors (XY,YZ,ZX,XW,YW,ZW)'
+                  : selectedTopology === 'HERITAGE_E1M1_HANGAR'
+                  ? '4D Volumetric Sieve (Lofted BSP + Q16.16)'
+                  : '6DOF CORDIC Pitch/Yaw/Roll'}
               </span>
             </div>
           </div>

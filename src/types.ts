@@ -59,6 +59,7 @@ export interface GravityVector3D {
 export type TopologyType =
   | 'CONTINUOUS_TRI_STATE_GAUNTLET'
   | 'BH_STAR_ACCRETION_DISK'
+  | 'HERITAGE_E1M1_HANGAR'
   | 'THE_NULL_FRICTION_TESSERACT'
   | 'ISOTROPIC_HYPER_SPHERE'
   | 'NULL_FRICTION_OCTAGON'
@@ -180,12 +181,15 @@ export interface SplineControlPoint {
   baseX: number;
   baseY: number;
   baseZ?: number;
+  baseW?: number;
   x: number;
   y: number;
   z?: number;
+  w?: number;
   vx: number;
   vy: number;
   vz?: number;
+  vw?: number;
   mass: number;
   isAnchor?: boolean;
   strain?: number;
@@ -232,12 +236,14 @@ export interface TetherAnchor {
   x: number;
   y: number;
   z?: number;
+  w?: number;
+  phaseOffset?: number;
   type: 'CORE' | 'SPLINE_NODE' | 'RESONANCE_ORB' | 'THERMODYNAMIC_WELL';
   radius: number;
   energyValue: number;
   active: boolean;
   lissajous?: LissajousParams;
-  q16Coords?: { x: number; y: number; z?: number };
+  q16Coords?: { x: number; y: number; z?: number; w?: number };
 }
 
 export interface ActiveTether {
@@ -340,3 +346,71 @@ export interface TelemetryStats {
   packetLossPercent: number;
   currentDvDt: number; // Rate of thermodynamic change
 }
+
+// Organelle 0xC3_COVALENT: The Heritage Sieve & Qbit Mask Types
+export type QbitShaderMask =
+  | 'QBIT_HEX_TECH'
+  | 'FRACTAL_NOISE_SLIME'
+  | 'CORDIC_OBSIDIAN'
+  | 'QBIT_HAZARD_STRIP'
+  | 'ALGORITHMIC_COMPUTER_PANEL';
+
+export type HeritageEntityType =
+  | 'IMP_HERITAGE'
+  | 'BARON_HERITAGE'
+  | 'ZOMBIEMAN_HERITAGE'
+  | 'DEMON_HERITAGE';
+
+export interface HeritageEntity {
+  id: string;
+  name: string;
+  type: HeritageEntityType;
+  x: number;
+  y: number;
+  z: number;
+  w: number;
+  vx: number;
+  vy: number;
+  vz: number;
+  radius: number;
+  energy: number; // Bound to Thermodynamic Ledger (E <= 600J)
+  maxEnergy: number;
+  isStasisLocked: boolean;
+  stasisLockRemainingTicks: number;
+  qbitMask: QbitShaderMask;
+  color: string;
+  tetherAttached: boolean;
+}
+
+export interface HeritageSector {
+  id: number;
+  name: string;
+  floorZ: number;
+  ceilZ: number;
+  lightLevel: number;
+  floorQbitMask: QbitShaderMask;
+  ceilQbitMask: QbitShaderMask;
+  wallQbitMask: QbitShaderMask;
+  polygon: FloatVector[];
+}
+
+export interface HeritageLinedef {
+  id: number;
+  v1: FloatVector;
+  v2: FloatVector;
+  frontSectorId: number;
+  backSectorId?: number;
+  isTwoSided: boolean;
+  wallQbitMask: QbitShaderMask;
+}
+
+export interface HeritageE1M1Archive {
+  hash: string;
+  sectors: HeritageSector[];
+  linedefs: HeritageLinedef[];
+  entities: HeritageEntity[];
+  hull: SplineHull;
+  anchors: TetherAnchor[];
+  timestamp: number;
+}
+

@@ -30,6 +30,7 @@ import {
 } from '../engine/gauntlet_synthesizer';
 import { covalentBHMechanics } from '../engine/covalent_bh_mechanics';
 import { bhLevelGenerator } from '../engine/node_0xBH_ACCRETION_SYNTHESIZER';
+import { heritageSieveEngine } from '../engine/node_0xHERITAGE_OFFICIATOR';
 import { BlackHoleSingularity } from '../types';
 import { Orbit, Compass, Eye, Shield, Zap, Sparkles, Layers, Disc } from 'lucide-react';
 
@@ -642,6 +643,177 @@ export const CyberArenaCanvas: React.FC<CyberArenaCanvasProps> = ({
               }
             }
           }
+
+          ctx.restore();
+        } else if (arena.topologyType === 'HERITAGE_E1M1_HANGAR') {
+          // Organelle 0xC3_COVALENT: Render Lofted E1M1 Hangar Architecture & Qbit Procedural Masks
+          ctx.save();
+          const archive = heritageSieveEngine.latestArchive || heritageSieveEngine.compileE1M1LoftSync(arena.center.x, arena.center.y);
+          const sectors = archive.sectors;
+          const linedefs = archive.linedefs;
+
+          // 1. Render Lofted Sector Floor Polygons with Procedural Qbit Masks
+          sectors.forEach(sec => {
+            const pts = sec.polygon;
+            ctx.beginPath();
+            let started = false;
+            for (let i = 0; i < pts.length; i++) {
+              const p = proj(pts[i].x, pts[i].y, sec.floorZ);
+              if (p.visible) {
+                if (!started) {
+                  ctx.moveTo(p.sx, p.sy);
+                  started = true;
+                } else {
+                  ctx.lineTo(p.sx, p.sy);
+                }
+              }
+            }
+            ctx.closePath();
+
+            // Evaluate procedural Qbit shader fill
+            if (sec.floorQbitMask === 'FRACTAL_NOISE_SLIME') {
+              const pulse = Math.sin(currentTick * 0.08) * 0.15 + 0.55;
+              ctx.fillStyle = `rgba(34, 197, 94, ${pulse})`;
+              ctx.strokeStyle = '#4ade80';
+              ctx.lineWidth = 1.5;
+            } else if (sec.floorQbitMask === 'QBIT_HEX_TECH') {
+              ctx.fillStyle = 'rgba(15, 23, 42, 0.65)';
+              ctx.strokeStyle = '#38bdf8';
+              ctx.lineWidth = 1.2;
+            } else {
+              ctx.fillStyle = 'rgba(8, 12, 22, 0.7)';
+              ctx.strokeStyle = '#64748b';
+              ctx.lineWidth = 1.0;
+            }
+            ctx.fill();
+            ctx.stroke();
+
+            // Ceiling Wireframe Outline
+            ctx.beginPath();
+            let cStarted = false;
+            for (let i = 0; i < pts.length; i++) {
+              const cp = proj(pts[i].x, pts[i].y, sec.ceilZ);
+              if (cp.visible) {
+                if (!cStarted) {
+                  ctx.moveTo(cp.sx, cp.sy);
+                  cStarted = true;
+                } else {
+                  ctx.lineTo(cp.sx, cp.sy);
+                }
+              }
+            }
+            ctx.closePath();
+            ctx.strokeStyle = 'rgba(56, 189, 248, 0.25)';
+            ctx.setLineDash([4, 4]);
+            ctx.stroke();
+            ctx.setLineDash([]);
+          });
+
+          // 2. Render Vertical Extruded Wall Splines from Floor to Ceiling
+          linedefs.forEach(ld => {
+            const sec = sectors.find(s => s.id === ld.frontSectorId);
+            const fZ = sec ? sec.floorZ : -20;
+            const cZ = sec ? sec.ceilZ : 160;
+
+            const p1Floor = proj(ld.v1.x, ld.v1.y, fZ);
+            const p2Floor = proj(ld.v2.x, ld.v2.y, fZ);
+            const p1Ceil = proj(ld.v1.x, ld.v1.y, cZ);
+            const p2Ceil = proj(ld.v2.x, ld.v2.y, cZ);
+
+            if (p1Floor.visible && p2Floor.visible && p1Ceil.visible && p2Ceil.visible) {
+              // Wall Polygon
+              ctx.beginPath();
+              ctx.moveTo(p1Floor.sx, p1Floor.sy);
+              ctx.lineTo(p2Floor.sx, p2Floor.sy);
+              ctx.lineTo(p2Ceil.sx, p2Ceil.sy);
+              ctx.lineTo(p1Ceil.sx, p1Ceil.sy);
+              ctx.closePath();
+
+              // Wall color based on Qbit Shader Mask
+              // W-Phase notice: If human |w| > 14, show walls as translucent ghosted wireframe!
+              const isPhasedOut = Math.abs(human.w || 0) > 14;
+              if (isPhasedOut) {
+                ctx.fillStyle = 'rgba(192, 132, 252, 0.08)'; // Translucent 4D bypass
+                ctx.strokeStyle = 'rgba(192, 132, 252, 0.35)';
+              } else if (ld.wallQbitMask === 'QBIT_HAZARD_STRIP') {
+                ctx.fillStyle = 'rgba(245, 158, 11, 0.18)';
+                ctx.strokeStyle = '#f59e0b';
+              } else if (ld.wallQbitMask === 'ALGORITHMIC_COMPUTER_PANEL') {
+                ctx.fillStyle = 'rgba(56, 189, 248, 0.15)';
+                ctx.strokeStyle = '#38bdf8';
+              } else {
+                ctx.fillStyle = 'rgba(30, 41, 59, 0.35)';
+                ctx.strokeStyle = '#0284c7';
+              }
+              ctx.lineWidth = isPhasedOut ? 0.8 : 1.4;
+              ctx.fill();
+              ctx.stroke();
+
+              // Vertical structural struts
+              ctx.beginPath();
+              ctx.moveTo(p1Floor.sx, p1Floor.sy);
+              ctx.lineTo(p1Ceil.sx, p1Ceil.sy);
+              ctx.stroke();
+            }
+          });
+
+          // 3. Render Transpiled Heritage Entities
+          heritageSieveEngine.tickEntities(currentTick);
+          heritageSieveEngine.entities.forEach(ent => {
+            const ep = proj(ent.x, ent.y, ent.z);
+            if (ep.visible) {
+              const r = Math.max(8, ent.radius * ep.scale);
+
+              // 4D Bounding Hypersphere Halo
+              ctx.save();
+              ctx.beginPath();
+              ctx.arc(ep.sx, ep.sy, r * 1.3, 0, Math.PI * 2);
+              ctx.fillStyle = ent.isStasisLocked ? 'rgba(56, 189, 248, 0.2)' : 'rgba(249, 115, 22, 0.15)';
+              ctx.fill();
+
+              // Entity Core
+              ctx.beginPath();
+              ctx.arc(ep.sx, ep.sy, r, 0, Math.PI * 2);
+              ctx.fillStyle = ent.color;
+              ctx.fill();
+              ctx.strokeStyle = ent.isStasisLocked ? '#38bdf8' : '#ffffff';
+              ctx.lineWidth = 1.5;
+              ctx.stroke();
+
+              // Stasis Lock Rings
+              if (ent.isStasisLocked) {
+                ctx.beginPath();
+                ctx.arc(ep.sx, ep.sy, r * 1.6, 0, Math.PI * 2);
+                ctx.strokeStyle = 'rgba(56, 189, 248, 0.8)';
+                ctx.setLineDash([3, 3]);
+                ctx.stroke();
+                ctx.setLineDash([]);
+              }
+
+              // Thermodynamic Ledger Energy Bar
+              const barWidth = 40;
+              const barHeight = 4;
+              const barX = ep.sx - barWidth * 0.5;
+              const barY = ep.sy - r - 10;
+              const fillW = Math.max(0, (ent.energy / ent.maxEnergy) * barWidth);
+
+              ctx.fillStyle = 'rgba(0, 0, 0, 0.75)';
+              ctx.fillRect(barX, barY, barWidth, barHeight);
+              ctx.fillStyle = ent.energy < 200 ? '#f43f5e' : '#10b981';
+              ctx.fillRect(barX, barY, fillW, barHeight);
+              ctx.strokeStyle = 'rgba(255, 255, 255, 0.4)';
+              ctx.lineWidth = 0.5;
+              ctx.strokeRect(barX, barY, barWidth, barHeight);
+
+              // Name label
+              ctx.fillStyle = '#ffffff';
+              ctx.font = '8px monospace';
+              ctx.textAlign = 'center';
+              ctx.fillText(`${ent.name} [${ent.energy.toFixed(0)}J]`, ep.sx, barY - 3);
+
+              ctx.restore();
+            }
+          });
 
           ctx.restore();
         } else {
@@ -1710,6 +1882,34 @@ export const CyberArenaCanvas: React.FC<CyberArenaCanvasProps> = ({
       beEngine.addLog(`[OFFENSIVE TETHER] Latched onto Be <> hypersphere! Kinetic Shear active — drag into accretion shear or walls to burn ledger!`, 'RESONANCE', currentTick);
       onTetherCreated();
       return;
+    }
+
+    // 2b. Check if clicked a Transpiled Heritage Entity (Imp, Baron, Zombieman, Demon)
+    if (arena.topologyType === 'HERITAGE_E1M1_HANGAR') {
+      const clickedHeritageEnt = heritageSieveEngine.entities.find(ent => {
+        const p = (isHyperSphere || is3DMode)
+          ? project3D(ent.x, ent.y, ent.z, targetX, targetY, targetZ, cam.yaw, cam.pitch, cam.dist, cam.fov, width, height)
+          : { sx: ent.x, sy: ent.y, scale: 1, depth: 100, visible: true };
+        if (!p.visible) return false;
+        return Math.hypot(p.sx - x, p.sy - y) <= (ent.radius * p.scale + 16);
+      });
+
+      if (clickedHeritageEnt) {
+        human.activeTether = {
+          sourceId: human.id,
+          targetEntityId: clickedHeritageEnt.id,
+          targetPoint3D: { x: clickedHeritageEnt.x, y: clickedHeritageEnt.y, z: clickedHeritageEnt.z },
+          length: Math.hypot(human.x - clickedHeritageEnt.x, human.y - clickedHeritageEnt.y, (human.z || 0) - clickedHeritageEnt.z),
+          maxLength: 480,
+          tension: 0.65,
+          siphoning: false,
+          color: '#f43f5e'
+        };
+        cyberAudio.playKineticShear();
+        beEngine.addLog(`[HERITAGE TETHER] Latched onto ${clickedHeritageEnt.name} hypersphere! Kinetic Shear active on Thermodynamic Ledger.`, 'RESONANCE', currentTick);
+        onTetherCreated();
+        return;
+      }
     }
 
     // Check if clicked an anchor node (Thermodynamic Well) in 3D projection or 2D

@@ -9,6 +9,7 @@ import { VolumetricArenaSynthesizer } from './omni_axial_arena';
 import { autopoieticGauntlet } from './gauntlet_synthesizer';
 import { covalentBHMechanics, DEFAULT_BH_MASS_Q16 } from './covalent_bh_mechanics';
 import { bhLevelGenerator } from './node_0xBH_ACCRETION_SYNTHESIZER';
+import { heritageSieveEngine } from './node_0xHERITAGE_OFFICIATOR';
 
 export type { TopologyType };
 
@@ -51,6 +52,10 @@ export class ArenaForge {
         friction: 0.006
       };
       this.synthesizeBHStarAccretionDisk();
+    } else if (topology === 'HERITAGE_E1M1_HANGAR') {
+      const archive = heritageSieveEngine.latestArchive || heritageSieveEngine.compileE1M1LoftSync(this.center.x, this.center.y);
+      this.hull = archive.hull;
+      this.synthesizeHeritageE1M1Hangar();
     } else if (topology === 'THE_NULL_FRICTION_TESSERACT') {
       this.hull = this.volumetricSynthesizer.generateHyperSphere(this.center.x, this.center.y, 0, this.radiusX * 1.1).hull;
       this.synthesizeNullFrictionTesseract();
@@ -70,6 +75,8 @@ export class ArenaForge {
       this.synthesizeContinuousTriStateGauntlet();
     } else if (type === 'BH_STAR_ACCRETION_DISK') {
       this.synthesizeBHStarAccretionDisk();
+    } else if (type === 'HERITAGE_E1M1_HANGAR') {
+      this.synthesizeHeritageE1M1Hangar();
     } else if (type === 'THE_NULL_FRICTION_TESSERACT') {
       this.synthesizeNullFrictionTesseract();
     } else if (type === 'ISOTROPIC_HYPER_SPHERE') {
@@ -123,6 +130,19 @@ export class ArenaForge {
     this.hull = archive.hull;
     this.anchors = archive.anchors;
     this.singularity = archive.singularity;
+    this.recalculateBVH();
+  }
+
+  /**
+   * Organelle 0xC3_COVALENT: The Heritage Sieve Transpilation
+   * Synthesizes 4D lofted E1M1 Hangar geometry from legacy BSP data.
+   */
+  public synthesizeHeritageE1M1Hangar(): void {
+    this.topologyType = 'HERITAGE_E1M1_HANGAR';
+    this.singularity = null;
+    const archive = heritageSieveEngine.latestArchive || heritageSieveEngine.compileE1M1LoftSync(this.center.x, this.center.y);
+    this.hull = archive.hull;
+    this.anchors = archive.anchors;
     this.recalculateBVH();
   }
 
