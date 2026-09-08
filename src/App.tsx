@@ -26,6 +26,7 @@ import { RollbackSieveInspector } from './components/RollbackSieveInspector';
 import { ThermodynamicBankHUD } from './components/ThermodynamicBankHUD';
 import { BeInstanceArbitrator } from './components/BeInstanceArbitrator';
 import { KernelTerminal } from './components/KernelTerminal';
+import { CyberAthleticManualModal } from './components/CyberAthleticManualModal';
 
 import {
   Volume2,
@@ -44,7 +45,8 @@ import {
   Maximize2,
   Orbit,
   Shield,
-  Disc
+  Disc,
+  BookOpen
 } from 'lucide-react';
 
 export default function App() {
@@ -95,6 +97,7 @@ export default function App() {
   const [showCoordinates, setShowCoordinates] = useState<boolean>(true);
   const [selectedTopology, setSelectedTopology] = useState<TopologyType>('CONTINUOUS_TRI_STATE_GAUNTLET');
   const [compileFlash, setCompileFlash] = useState<boolean>(false);
+  const [showManual, setShowManual] = useState<boolean>(false);
 
   // Key state tracking
   const keysPressed = useRef<{ [key: string]: boolean }>({});
@@ -111,6 +114,16 @@ export default function App() {
         if (human.activeTether) {
           handleSlingshotDischarge();
         }
+      }
+
+      // 'H' or '?' toggles Field Manual
+      if (e.key === 'h' || e.key === 'H' || e.key === '?') {
+        setShowManual(prev => !prev);
+      }
+
+      // ESC closes Field Manual if open
+      if (e.key === 'Escape') {
+        setShowManual(false);
       }
     };
 
@@ -701,6 +714,16 @@ export default function App() {
             <RotateCcw className="w-4 h-4" />
           </button>
 
+          {/* Cyber-Athletic Field Manual / Play Guide */}
+          <button
+            onClick={() => setShowManual(true)}
+            title="Open Cyber-Athletic Field Manual & Play Guide [H]"
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-gradient-to-r from-cyan-600 via-indigo-600 to-rose-600 hover:from-cyan-500 hover:to-rose-500 text-white font-bold text-xs shadow-md shadow-cyan-950 transition-all cursor-pointer ring-1 ring-cyan-400/40"
+          >
+            <BookOpen className="w-4 h-4" />
+            <span>FIELD MANUAL</span>
+          </button>
+
           {/* Audio Toggle */}
           <button
             onClick={handleToggleAudio}
@@ -953,6 +976,17 @@ export default function App() {
       <footer className="border-t border-[#1e293b] bg-[#05070c] px-4 py-3 text-center text-xs font-mono text-slate-500">
         Covalent-OS-11-11-0 Bare-Metal Substrate // Core Invariant $1 \equiv 1$ Absolute Mathematical Parity Verified // 60-Tick Sliding Memory Window
       </footer>
+
+      {/* Cyber-Athletic Field Manual & Play Guide Modal */}
+      <CyberAthleticManualModal
+        isOpen={showManual}
+        onClose={() => setShowManual(false)}
+        human={human}
+        beEngine={beEngine}
+        currentTopology={selectedTopology}
+        onSelectTopology={handleTopologySelect}
+        onBeModeChange={(mode) => beEngine.setMode(mode)}
+      />
     </div>
   );
 }

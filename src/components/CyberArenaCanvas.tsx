@@ -1671,15 +1671,48 @@ export const CyberArenaCanvas: React.FC<CyberArenaCanvasProps> = ({
       }
     }
 
-    // Check if clicked an anchor node (Thermodynamic Well) in 3D projection or 2D
     const cam = cameraRef.current;
     const targetX = followHuman ? human.x : arena.center.x;
     const targetY = followHuman ? human.y : arena.center.y;
     const targetZ = followHuman ? (human.z || 0) : 0;
     const width = canvas.width / (window.devicePixelRatio || 1);
     const height = canvas.height / (window.devicePixelRatio || 1);
-
     const isHyperSphere = arena.topologyType === 'ISOTROPIC_HYPER_SPHERE';
+
+    // 2. Check if clicked opponent (Be <>) bounding hypersphere -> OFFENSIVE KINETIC TETHER
+    const beProj = (isHyperSphere || is3DMode)
+      ? project3D(beEngine.entity.x, beEngine.entity.y, beEngine.entity.z || 0, targetX, targetY, targetZ, cam.yaw, cam.pitch, cam.dist, cam.fov, width, height)
+      : { sx: beEngine.entity.x, sy: beEngine.entity.y, scale: 1, depth: 100, visible: true };
+
+    const beScreenDist = beProj.visible ? Math.hypot(beProj.sx - x, beProj.sy - y) : 9999;
+    const beHitRadius = Math.max(20, (beEngine.entity.radius || 18) * (beProj.scale || 1) + 16);
+
+    if (beProj.visible && beScreenDist <= beHitRadius) {
+      // Defensive Phase-Shift check: If Be <> is stepped into 4D W-space, it collapsed from the 3D cross-section!
+      if (Math.abs(beEngine.entity.w) > 14) {
+        cyberAudio.playPhaseShift();
+        beEngine.addLog(`[TETHER EVADED] Be <> phase-shifted into 4D W-space (W=${beEngine.entity.w.toFixed(1)})! Avatar collapsed from 3D cross-section.`, 'WARNING', currentTick);
+        return;
+      }
+
+      // Project offensive tether directly onto Be <>'s hypersphere
+      human.activeTether = {
+        sourceId: human.id,
+        targetEntityId: beEngine.entity.id,
+        targetPoint3D: { x: beEngine.entity.x, y: beEngine.entity.y, z: beEngine.entity.z || 0 },
+        length: Math.hypot(human.x - beEngine.entity.x, human.y - beEngine.entity.y, (human.z || 0) - (beEngine.entity.z || 0)),
+        maxLength: 480,
+        tension: 0.65,
+        siphoning: false,
+        color: '#f43f5e'
+      };
+      cyberAudio.playKineticShear();
+      beEngine.addLog(`[OFFENSIVE TETHER] Latched onto Be <> hypersphere! Kinetic Shear active — drag into accretion shear or walls to burn ledger!`, 'RESONANCE', currentTick);
+      onTetherCreated();
+      return;
+    }
+
+    // Check if clicked an anchor node (Thermodynamic Well) in 3D projection or 2D
     let clickedAnchor = null;
 
     if (isHyperSphere || is3DMode) {
