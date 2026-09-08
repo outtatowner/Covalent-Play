@@ -60,6 +60,9 @@ export type TopologyType =
   | 'CONTINUOUS_TRI_STATE_GAUNTLET'
   | 'BH_STAR_ACCRETION_DISK'
   | 'HERITAGE_E1M1_HANGAR'
+  | 'QUAKE_HYPER_ROTATIONAL'
+  | 'TESSERACT_KINETIC_SHEAR'
+  | 'MARBLE_MARCHER_FRACTAL'
   | 'THE_NULL_FRICTION_TESSERACT'
   | 'ISOTROPIC_HYPER_SPHERE'
   | 'NULL_FRICTION_OCTAGON'
@@ -200,7 +203,7 @@ export interface SplineHull {
   points: SplineControlPoint[];
   color: string;
   tension: number;
-  material?: 'MATERIAL_TRANSLUCENT_GLASS' | 'DEFAULT';
+  material?: 'MATERIAL_TRANSLUCENT_GLASS' | 'DEFAULT' | 'GOTHIC_SLIPGATE_OBSIDIAN' | 'OCTREE_SMOOTHED_BEZIER' | 'Q16_RAYMARCHED_FRACTAL';
   refractionIndex?: number;
   sphericalRadius?: number;
   friction?: number;
@@ -238,7 +241,7 @@ export interface TetherAnchor {
   z?: number;
   w?: number;
   phaseOffset?: number;
-  type: 'CORE' | 'SPLINE_NODE' | 'RESONANCE_ORB' | 'THERMODYNAMIC_WELL';
+  type: 'CORE' | 'SPLINE_NODE' | 'RESONANCE_ORB' | 'THERMODYNAMIC_WELL' | 'SLIPGATE_PHASE_DOOR' | 'KINETIC_TETHER_NODE';
   radius: number;
   energyValue: number;
   active: boolean;
@@ -457,4 +460,75 @@ export interface C4BootSequenceState {
   causticsFlux: number;
   voronoiCellCount: number;
 }
+
+// Organelle 0xC5_COVALENT: Exogenous Git Ingestion & Heritage Sieve Dashboard
+export type TranspilationPhase = 
+  | 'IDLE' 
+  | 'LEGACY_PARSING' 
+  | 'Z_LOFTING' 
+  | 'W_AXIS_INJECTION' 
+  | 'QBIT_MASKING' 
+  | 'ASSIMILATED' 
+  | 'COLLAPSE';
+
+export type LegacyArchitectureType = 
+  | 'BSP_2_5D' 
+  | 'BSP_3D_VIS' 
+  | 'DYNAMIC_OCTREE' 
+  | 'SDF_RAYMARCH' 
+  | 'UNKNOWN';
+
+export interface PreLoadedRepositoryCatalyst {
+  id: string;
+  gitUrl: string;
+  title: string;
+  originalArchitecture: string;
+  covalentResult: string;
+  architectureType: LegacyArchitectureType;
+  badgeColor: string;
+  summary: string;
+  mathematicalDetail: string;
+  suggestedTopology: TopologyType;
+  byteSize: number;
+}
+
+export interface GitBufferData {
+  gitUrl: string;
+  repoName: string;
+  commitHash: string;
+  byteLength: number;
+  treeNodesCount: number;
+  lumpSignatures: string[];
+  inferredArchitecture: LegacyArchitectureType;
+  rawPayloadSample: string;
+}
+
+export interface TranspilationMatrixState {
+  activePhase: TranspilationPhase;
+  phaseProgress: {
+    LEGACY_PARSING: number;
+    Z_LOFTING: number;
+    W_AXIS_INJECTION: number;
+    QBIT_MASKING: number;
+  };
+  currentLog: string[];
+  gitBufferBytes: number;
+  quipuLedgerHash: string;
+  detectedArchitecture: string;
+  activeRepoUrl: string;
+  nodesTranspiled: number;
+  hyperspheresBound: number;
+  invariantStatus: string;
+  isStreaming: boolean;
+  activeCatalystId?: string;
+}
+
+export interface ExogenousIngestEvent {
+  timestamp: number;
+  stage: TranspilationPhase;
+  message: string;
+  gitUrl: string;
+  architecture: string;
+}
+
 

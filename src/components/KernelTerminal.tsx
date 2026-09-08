@@ -19,7 +19,7 @@ interface KernelTerminalProps {
   be: Entity;
 }
 
-type TabType = 'C4_BOOT' | 'B2_MATERIALS' | 'B2_SYNTHESIZER' | 'C_KERNEL' | 'TS_TETHER' | 'QUIPU_LEDGER';
+type TabType = 'C5_EXOGENOUS' | 'C4_BOOT' | 'B2_MATERIALS' | 'B2_SYNTHESIZER' | 'C_KERNEL' | 'TS_TETHER' | 'QUIPU_LEDGER';
 
 export const KernelTerminal: React.FC<KernelTerminalProps> = ({
   currentTick,
@@ -27,7 +27,7 @@ export const KernelTerminal: React.FC<KernelTerminalProps> = ({
   human,
   be
 }) => {
-  const [activeTab, setActiveTab] = useState<TabType>('C4_BOOT');
+  const [activeTab, setActiveTab] = useState<TabType>('C5_EXOGENOUS');
 
   return (
     <div className="bg-[#090d16] border border-[#1e293b] rounded-xl p-4 flex flex-col gap-3 font-mono shadow-xl text-slate-200">
@@ -39,17 +39,27 @@ export const KernelTerminal: React.FC<KernelTerminalProps> = ({
             BARE-METAL RING-0 // ORGANELLE SOURCE
           </h2>
           <span className="text-[10px] px-2 py-0.5 rounded bg-cyan-950 text-cyan-400 border border-cyan-800 font-bold">
-            0xC4 COVALENT UNIFIED
+            0xC5 EXOGENOUS PIPE
           </span>
         </div>
 
         {/* Tab switcher */}
         <div className="flex flex-wrap gap-1 bg-[#05070c] p-1 rounded-lg border border-[#1e293b] text-xs">
           <button
+            onClick={() => setActiveTab('C5_EXOGENOUS')}
+            className={`px-2.5 py-1 rounded transition-colors cursor-pointer ${
+              activeTab === 'C5_EXOGENOUS'
+                ? 'bg-gradient-to-r from-cyan-600 to-teal-600 text-white font-bold shadow-sm shadow-cyan-500/30'
+                : 'text-slate-400 hover:text-slate-200'
+            }`}
+          >
+            node_0xEXOGENOUS_PIPE.ts
+          </button>
+          <button
             onClick={() => setActiveTab('C4_BOOT')}
             className={`px-2.5 py-1 rounded transition-colors cursor-pointer ${
               activeTab === 'C4_BOOT'
-                ? 'bg-gradient-to-r from-cyan-600 to-emerald-600 text-white font-bold shadow-sm shadow-cyan-500/30'
+                ? 'bg-cyan-700 text-white font-bold shadow-sm'
                 : 'text-slate-400 hover:text-slate-200'
             }`}
           >
@@ -110,6 +120,33 @@ export const KernelTerminal: React.FC<KernelTerminalProps> = ({
 
       {/* Code Display Area */}
       <div className="bg-[#05070c] rounded-lg p-3 border border-[#1e293b] text-xs overflow-x-auto max-h-60 leading-relaxed font-mono">
+        {activeTab === 'C5_EXOGENOUS' && (
+          <pre className="text-slate-300">
+            <span className="text-slate-500">// node_0xEXOGENOUS_PIPE.ts (Organelle 0xC5_COVALENT)</span>{'\n'}
+            <span className="text-purple-400">export class</span> <span className="text-yellow-400">HeritageTerminal</span> {'{'}{'\n'}
+            {'    '}<span className="text-purple-400">public async</span> <span className="text-emerald-400 font-bold">ingestRepository</span>(gitUrl: <span className="text-cyan-400">string</span>): <span className="text-cyan-400">Promise&lt;void&gt;</span> {'{'}{'\n'}
+            {'        '}console.log(<span className="text-emerald-300">`[ FORGE ] Cloning exogenous geometry: ${'{'}gitUrl{'}'}`</span>);{'\n'}
+            {'        '}<span className="text-blue-400">const</span> rawData = <span className="text-purple-400">await</span> <span className="text-cyan-300">sys_covalent_fetch_git_buffer</span>(gitUrl);{'\n\n'}
+            {'        '}<span className="text-slate-500">// Route to specific mathematical transpiler based on architecture</span>{'\n'}
+            {'        '}<span className="text-purple-400">if</span> (<span className="text-cyan-300">sys_covalent_detect_legacy_wad</span>(rawData)) {'{'}{'\n'}
+            {'            '}console.log(<span className="text-emerald-300">`[ SIEVE ] 2.5D BSP detected. Initiating Z-Loft...`</span>);{'\n'}
+            {'            '}<span className="text-cyan-300">sys_covalent_transpile_wad_to_4d</span>(rawData);{'\n'}
+            {'        '}{'}'} <span className="text-purple-400">else if</span> (<span className="text-cyan-300">sys_covalent_detect_octree</span>(rawData)) {'{'}{'\n'}
+            {'            '}console.log(<span className="text-emerald-300">`[ SIEVE ] Octree detected. Smoothing to Vector Splines...`</span>);{'\n'}
+            {'            '}<span className="text-cyan-300">sys_covalent_transpile_octree_to_spline</span>(rawData);{'\n'}
+            {'        '}{'}'} <span className="text-purple-400">else if</span> (<span className="text-cyan-300">sys_covalent_detect_sdf</span>(rawData)) {'{'}{'\n'}
+            {'            '}console.log(<span className="text-emerald-300">`[ SIEVE ] SDF detected. Porting float to Q16.16 CORDIC...`</span>);{'\n'}
+            {'            '}<span className="text-cyan-300">sys_covalent_port_float_to_q16</span>(rawData);{'\n'}
+            {'        '}{'}'} <span className="text-purple-400">else</span> {'{'}{'\n'}
+            {'            '}console.warn(<span className="text-rose-400">`[ 1 !== 1 ] Mathematical anomaly. Topological collapse.`</span>);{'\n'}
+            {'            '}<span className="text-purple-400">return</span>;{'\n'}
+            {'        '}{'}'}{'\n\n'}
+            {'        '}console.log(<span className="text-emerald-300">`[ 1 === 1 ] Repository assimilated. Ready for W-Axis injection.`</span>);{'\n'}
+            {'    '}{'}'}{'\n'}
+            {'}'}
+          </pre>
+        )}
+
         {activeTab === 'C4_BOOT' && (
           <pre className="text-slate-300">
             <span className="text-slate-500">// node_0xC4_UNIFIED_BOOT.ts (Organelle 0xC4_COVALENT)</span>{'\n'}

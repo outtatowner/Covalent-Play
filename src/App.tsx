@@ -28,6 +28,7 @@ import { BeInstanceArbitrator } from './components/BeInstanceArbitrator';
 import { KernelTerminal } from './components/KernelTerminal';
 import { CyberAthleticManualModal } from './components/CyberAthleticManualModal';
 import { BareMetalScalingMatrixModal } from './components/BareMetalScalingMatrixModal';
+import { HeritageSieveDashboard } from './components/HeritageSieveDashboard';
 import { covalentUnifiedBoot } from './engine/node_0xC4_UNIFIED_BOOT';
 
 import {
@@ -49,7 +50,8 @@ import {
   Shield,
   Disc,
   BookOpen,
-  Cpu
+  Cpu,
+  GitPullRequest
 } from 'lucide-react';
 
 export default function App() {
@@ -102,6 +104,7 @@ export default function App() {
   const [compileFlash, setCompileFlash] = useState<boolean>(false);
   const [showManual, setShowManual] = useState<boolean>(false);
   const [showScalingMatrix, setShowScalingMatrix] = useState<boolean>(false);
+  const [showHeritageSieve, setShowHeritageSieve] = useState<boolean>(false);
 
   // Key state tracking
   const keysPressed = useRef<{ [key: string]: boolean }>({});
@@ -414,6 +417,32 @@ export default function App() {
     setTimeout(() => setCompileFlash(false), 900);
   };
 
+  // Organelle 0xC5_COVALENT: Exogenous Ingestion Assimilation Handler
+  const handleAssimilateTopology = useCallback((topology: TopologyType, repoTitle: string) => {
+    setSelectedTopology(topology);
+    arena.setTopology(topology);
+    human.x = arena.center.x;
+    human.y = arena.center.y;
+    human.z = topology === 'QUAKE_HYPER_ROTATIONAL' ? 20 : 0;
+    human.w = 0;
+    human.vx = 0;
+    human.vy = 0;
+    human.vz = 0;
+    human.vw = 0;
+    beEngine.entity.x = arena.center.x + 80;
+    beEngine.entity.y = arena.center.y - 80;
+    beEngine.entity.z = topology === 'QUAKE_HYPER_ROTATIONAL' ? 20 : 0;
+    beEngine.entity.w = 0;
+    beEngine.entity.vx = 0;
+    beEngine.entity.vy = 0;
+    beEngine.entity.vz = 0;
+    beEngine.entity.vw = 0;
+    cyberAudio.playConstructiveResonance();
+    beEngine.addLog(`0xC5 EXOGENOUS INGESTION: ${repoTitle} assimilated into ${topology} [1===1 Parity Locked]`, 'SIEVE_0xC5', tickRef.current);
+    setCompileFlash(true);
+    setTimeout(() => setCompileFlash(false), 900);
+  }, [arena, beEngine, human]);
+
   // Dedicated BH* Accretion Maze Compile (Hawking Radiation Extrusion)
   const handleBHAccretionCompile = () => {
     setSelectedTopology('BH_STAR_ACCRETION_DISK');
@@ -636,6 +665,16 @@ export default function App() {
           >
             <Layers className="w-3.5 h-3.5 text-cyan-400" />
             <span>SCALING MATRIX</span>
+          </button>
+
+          {/* Organelle 0xC5: Heritage Sieve Dashboard (Exogenous Git Ingestion) */}
+          <button
+            onClick={() => setShowHeritageSieve(true)}
+            title="Organelle 0xC5_COVALENT: The Heritage Sieve Dashboard (Git-Pipe Input & 4 Archives Catalysts)"
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg font-bold transition-all cursor-pointer border bg-gradient-to-r from-teal-700 via-cyan-800 to-indigo-800 hover:from-teal-600 hover:to-indigo-700 text-cyan-100 border-cyan-400/80 shadow-md shadow-cyan-500/30 ring-1 ring-teal-400"
+          >
+            <GitPullRequest className="w-3.5 h-3.5 text-teal-300 animate-pulse" />
+            <span>0xC5 HERITAGE SIEVE</span>
           </button>
 
           {/* Organelle 0xC3: Heritage Sieve E1M1 Hangar Action */}
@@ -984,6 +1023,7 @@ export default function App() {
             onTetherCreated={() => {}}
             onShearApplied={() => {}}
             onOpenScalingMatrix={() => setShowScalingMatrix(true)}
+            onOpenHeritageSieve={() => setShowHeritageSieve(true)}
           />
 
           {/* Mobile On-Screen Virtual 6DOF Controls */}
@@ -1124,6 +1164,13 @@ export default function App() {
         onBootExecuted={() => {
           handleUnifiedBootExecute();
         }}
+      />
+
+      {/* Organelle 0xC5: The Heritage Sieve Dashboard Modal */}
+      <HeritageSieveDashboard
+        isOpen={showHeritageSieve}
+        onClose={() => setShowHeritageSieve(false)}
+        onAssimilateTopology={handleAssimilateTopology}
       />
     </div>
   );

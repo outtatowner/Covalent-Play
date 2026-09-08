@@ -33,7 +33,7 @@ import { bhLevelGenerator } from '../engine/node_0xBH_ACCRETION_SYNTHESIZER';
 import { heritageSieveEngine } from '../engine/node_0xHERITAGE_OFFICIATOR';
 import { covalentUnifiedBoot } from '../engine/node_0xC4_UNIFIED_BOOT';
 import { BlackHoleSingularity } from '../types';
-import { Orbit, Compass, Eye, Shield, Zap, Sparkles, Layers, Disc, Cpu } from 'lucide-react';
+import { Orbit, Compass, Eye, Shield, Zap, Sparkles, Layers, Disc, Cpu, GitPullRequest } from 'lucide-react';
 
 interface CyberArenaCanvasProps {
   arena: ArenaForge;
@@ -46,6 +46,7 @@ interface CyberArenaCanvasProps {
   onTetherCreated: () => void;
   onShearApplied: () => void;
   onOpenScalingMatrix?: () => void;
+  onOpenHeritageSieve?: () => void;
 }
 
 // Color interpolation for thermodynamic dV/dt strain: Cold Cyan -> Electric Violet -> Warning Crimson
@@ -130,7 +131,8 @@ export const CyberArenaCanvas: React.FC<CyberArenaCanvasProps> = ({
   showCoordinates,
   onTetherCreated,
   onShearApplied,
-  onOpenScalingMatrix
+  onOpenScalingMatrix,
+  onOpenHeritageSieve
 }) => {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
 
@@ -848,6 +850,172 @@ export const CyberArenaCanvas: React.FC<CyberArenaCanvasProps> = ({
               });
               ctx.restore();
             }
+          }
+
+          ctx.restore();
+        } else if (arena.topologyType === 'QUAKE_HYPER_ROTATIONAL') {
+          // Organelle 0xC5: Quake True 3D BSP Transpiled into Hyper-Rotational Slipgate
+          ctx.save();
+          const cx = arena.center.x;
+          const cy = arena.center.y;
+
+          // Gothic Slipgate Arches (lofted 3D quad curves)
+          const archAngles = [0, Math.PI * 0.5, Math.PI, Math.PI * 1.5];
+          archAngles.forEach(ang => {
+            const archR = 150;
+            const ax = cx + Math.cos(ang) * archR;
+            const ay = cy + Math.sin(ang) * archR;
+
+            ctx.beginPath();
+            let started = false;
+            for (let t = 0; t <= 16; t++) {
+              const u = t / 16;
+              const archH = Math.sin(u * Math.PI) * 75 - 35;
+              const rOff = (u - 0.5) * 60;
+              const px = ax - Math.sin(ang) * rOff;
+              const py = ay + Math.cos(ang) * rOff;
+              const p = proj(px, py, archH);
+              if (p.visible) {
+                if (!started) { ctx.moveTo(p.sx, p.sy); started = true; }
+                else { ctx.lineTo(p.sx, p.sy); }
+              }
+            }
+            ctx.strokeStyle = '#f59e0b';
+            ctx.lineWidth = 1.8;
+            ctx.stroke();
+          });
+
+          // W-Axis Phase Portals (Slipgates)
+          const slipgates = [
+            { x: cx, y: cy - 130, z: 0, label: 'SLIPGATE_ALPHA [W=+45]' },
+            { x: cx, y: cy + 130, z: 0, label: 'SLIPGATE_OMEGA [W=-45]' }
+          ];
+
+          slipgates.forEach(sg => {
+            const sp = proj(sg.x, sg.y, sg.z);
+            if (sp.visible) {
+              const pulse = Math.sin(currentTick * 0.1) * 6;
+              const r = (24 + pulse) * sp.scale;
+
+              // Glowing Slipgate Aperture
+              ctx.beginPath();
+              ctx.arc(sp.sx, sp.sy, r, 0, Math.PI * 2);
+              ctx.fillStyle = 'rgba(245, 158, 11, 0.2)';
+              ctx.fill();
+              ctx.strokeStyle = '#fbbf24';
+              ctx.lineWidth = 2.2;
+              ctx.shadowColor = '#f59e0b';
+              ctx.shadowBlur = 15;
+              ctx.stroke();
+              ctx.shadowBlur = 0;
+
+              // Phase Door Energy Ring
+              ctx.beginPath();
+              ctx.arc(sp.sx, sp.sy, r * 0.55, 0, Math.PI * 2);
+              ctx.strokeStyle = '#38bdf8';
+              ctx.lineWidth = 1.2;
+              ctx.stroke();
+
+              if (showCoordinates) {
+                ctx.fillStyle = '#fde68a';
+                ctx.font = '8px monospace';
+                ctx.textAlign = 'center';
+                ctx.fillText(sg.label, sp.sx, sp.sy - r - 6);
+              }
+            }
+          });
+
+          ctx.restore();
+        } else if (arena.topologyType === 'TESSERACT_KINETIC_SHEAR') {
+          // Organelle 0xC5: Tesseract Dynamic Octree Smoothed to Kinetic Shear Bézier Splines
+          ctx.save();
+          const cx = arena.center.x;
+          const cy = arena.center.y;
+
+          // Smoothed Octree Grid Lines
+          const gridSize = 180;
+          const steps = 6;
+          ctx.lineWidth = 1.0;
+
+          for (let i = -steps; i <= steps; i++) {
+            const offset = (i / steps) * gridSize;
+            // X-line
+            ctx.beginPath();
+            let started = false;
+            for (let j = -steps; j <= steps; j++) {
+              const span = (j / steps) * gridSize;
+              const shearZ = Math.sin(currentTick * 0.05 + (i + j) * 0.4) * 22;
+              const p = proj(cx + span, cy + offset, shearZ);
+              if (p.visible) {
+                if (!started) { ctx.moveTo(p.sx, p.sy); started = true; }
+                else { ctx.lineTo(p.sx, p.sy); }
+              }
+            }
+            ctx.strokeStyle = 'rgba(16, 185, 129, 0.35)';
+            ctx.stroke();
+
+            // Y-line
+            ctx.beginPath();
+            started = false;
+            for (let j = -steps; j <= steps; j++) {
+              const span = (j / steps) * gridSize;
+              const shearZ = Math.sin(currentTick * 0.05 + (i - j) * 0.4) * 22;
+              const p = proj(cx + offset, cy + span, shearZ);
+              if (p.visible) {
+                if (!started) { ctx.moveTo(p.sx, p.sy); started = true; }
+                else { ctx.lineTo(p.sx, p.sy); }
+              }
+            }
+            ctx.strokeStyle = 'rgba(56, 189, 248, 0.3)';
+            ctx.stroke();
+          }
+
+          ctx.restore();
+        } else if (arena.topologyType === 'MARBLE_MARCHER_FRACTAL') {
+          // Organelle 0xC5: Marble Marcher Q16.16 CORDIC Integer Fractal warped by BH* Singularity
+          ctx.save();
+          const cx = arena.center.x;
+          const cy = arena.center.y;
+
+          // Raymarched Fractal Rings with CORDIC Modulations
+          const numRings = 7;
+          for (let r = 1; r <= numRings; r++) {
+            const rad = r * 30;
+            const segs = 48;
+            ctx.beginPath();
+            let started = false;
+            for (let s = 0; s <= segs; s++) {
+              const ang = (s / segs) * Math.PI * 2;
+              // Fractal Mandelbulb/Raymarch perturbation
+              const fractalWarp = Math.sin(ang * 5 + currentTick * 0.04) * (r * 3.5);
+              const zWarp = Math.cos(ang * 3 - currentTick * 0.03) * (r * 4.2);
+              const px = cx + Math.cos(ang) * (rad + fractalWarp);
+              const py = cy + Math.sin(ang) * (rad + fractalWarp);
+              const p = proj(px, py, zWarp);
+              if (p.visible) {
+                if (!started) { ctx.moveTo(p.sx, p.sy); started = true; }
+                else { ctx.lineTo(p.sx, p.sy); }
+              }
+            }
+            ctx.strokeStyle = `rgba(236, 72, 153, ${0.2 + (r / numRings) * 0.4})`;
+            ctx.lineWidth = 1.3;
+            ctx.stroke();
+          }
+
+          // Central BH* Gravitational Singularity Well
+          const centerP = proj(cx, cy, 0);
+          if (centerP.visible) {
+            const rPulse = 18 + Math.sin(currentTick * 0.12) * 4;
+            ctx.beginPath();
+            ctx.arc(centerP.sx, centerP.sy, rPulse * centerP.scale, 0, Math.PI * 2);
+            ctx.fillStyle = '#000000';
+            ctx.fill();
+            ctx.strokeStyle = '#ec4899';
+            ctx.lineWidth = 2.5;
+            ctx.shadowColor = '#f43f5e';
+            ctx.shadowBlur = 18;
+            ctx.stroke();
+            ctx.shadowBlur = 0;
           }
 
           ctx.restore();
@@ -2116,18 +2284,46 @@ export const CyberArenaCanvas: React.FC<CyberArenaCanvasProps> = ({
             <span>{covalentUnifiedBoot.substrateMode === 'INFINITE_SCALING_PARITY' ? 'PARITY: 64-CORE/8K' : 'SUBSTRATE: 32-BIT/<16MB'}</span>
           </button>
         )}
+
+        {/* Organelle 0xC5: Heritage Sieve Trigger Button */}
+        {onOpenHeritageSieve && (
+          <button
+            onClick={onOpenHeritageSieve}
+            className="flex items-center gap-1.5 px-2 py-1 rounded transition-colors cursor-pointer border bg-teal-950/80 text-teal-300 border-teal-500/40 hover:bg-teal-900/80"
+            title="Open Heritage Sieve Dashboard (Exogenous Git-Pipe & Archives)"
+          >
+            <GitPullRequest className="w-3.5 h-3.5 text-teal-300" />
+            <span>0xC5 HERITAGE SIEVE</span>
+          </button>
+        )}
       </div>
 
       {/* Top-Right Invariant Status */}
       <div className="absolute top-3 right-3 flex items-center gap-2 bg-[#090d16]/90 backdrop-blur-md px-3 py-1.5 rounded-lg border border-[#1e293b] text-[11px] text-slate-300 font-mono pointer-events-none z-20">
         <span className={`inline-block w-2 h-2 rounded-full animate-pulse ${
-          arena.topologyType === 'THE_NULL_FRICTION_TESSERACT' ? 'bg-fuchsia-400' : 'bg-cyan-400'
+          arena.topologyType === 'THE_NULL_FRICTION_TESSERACT' ? 'bg-fuchsia-400' :
+          arena.topologyType === 'QUAKE_HYPER_ROTATIONAL' ? 'bg-amber-400' :
+          arena.topologyType === 'TESSERACT_KINETIC_SHEAR' ? 'bg-emerald-400' :
+          arena.topologyType === 'MARBLE_MARCHER_FRACTAL' ? 'bg-pink-400' :
+          'bg-cyan-400'
         }`} />
         <span>
           {arena.topologyType === 'THE_NULL_FRICTION_TESSERACT'
             ? 'NULL-FRICTION TESSERACT // 4D HYPER-VOLUME'
             : arena.topologyType === 'ISOTROPIC_HYPER_SPHERE'
             ? 'ISOTROPIC HYPER-SPHERE // 6DOF'
+            : arena.topologyType === 'HERITAGE_E1M1_HANGAR'
+            ? 'HERITAGE E1M1 // VOLUMETRIC SPLINE'
+            : arena.topologyType === 'QUAKE_HYPER_ROTATIONAL'
+            ? 'QUAKE BSP // HYPER-ROTATIONAL SLIPGATE'
+            : arena.topologyType === 'TESSERACT_KINETIC_SHEAR'
+            ? 'TESSERACT OCTREE // KINETIC SHEAR BÉZIER'
+            : arena.topologyType === 'MARBLE_MARCHER_FRACTAL'
+            ? 'MARBLE MARCHER // Q16 CORDIC FRACTAL'
+            : arena.topologyType === 'BH_STAR_ACCRETION_DISK'
+            ? 'BH* ACCRETION DISK // KERR METRIC'
+            : arena.topologyType === 'CONTINUOUS_TRI_STATE_GAUNTLET'
+            ? 'TRI-STATE GAUNTLET // 1 === 1'
             : 'NULL-FRICTION OCTAGON // 1 === 1'}
         </span>
       </div>

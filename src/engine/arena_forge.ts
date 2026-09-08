@@ -77,6 +77,12 @@ export class ArenaForge {
       this.synthesizeBHStarAccretionDisk();
     } else if (type === 'HERITAGE_E1M1_HANGAR') {
       this.synthesizeHeritageE1M1Hangar();
+    } else if (type === 'QUAKE_HYPER_ROTATIONAL') {
+      this.synthesizeQuakeHyperRotational();
+    } else if (type === 'TESSERACT_KINETIC_SHEAR') {
+      this.synthesizeTesseractKineticShear();
+    } else if (type === 'MARBLE_MARCHER_FRACTAL') {
+      this.synthesizeMarbleMarcherFractal();
     } else if (type === 'THE_NULL_FRICTION_TESSERACT') {
       this.synthesizeNullFrictionTesseract();
     } else if (type === 'ISOTROPIC_HYPER_SPHERE') {
@@ -143,6 +149,262 @@ export class ArenaForge {
     const archive = heritageSieveEngine.latestArchive || heritageSieveEngine.compileE1M1LoftSync(this.center.x, this.center.y);
     this.hull = archive.hull;
     this.anchors = archive.anchors;
+    this.recalculateBVH();
+  }
+
+  /**
+   * Organelle 0xC5 Transpilation Catalyst 2: id-Software/Quake.git
+   * Hyper-Rotational: True 3D BSP with VIS discarded for CORDIC path-tracing.
+   * Teleporters converted into W-axis phase doors.
+   */
+  public synthesizeQuakeHyperRotational(): void {
+    this.topologyType = 'QUAKE_HYPER_ROTATIONAL';
+    this.singularity = null;
+    const pts: SplineControlPoint[] = [];
+    const count = 16;
+    for (let i = 0; i < count; i++) {
+      const angle = (i / count) * Math.PI * 2;
+      // Gothic polygonal octagonal fortress layout with gothic arched alcoves
+      const isAlcove = i % 4 === 1;
+      const r = isAlcove ? this.radiusX * 1.25 : this.radiusX * 0.95;
+      const zOffset = isAlcove ? 80 : -20;
+      const bx = this.center.x + Math.cos(angle) * r;
+      const by = this.center.y + Math.sin(angle) * r;
+      pts.push({
+        id: `quake_bsp_cp_${i}`,
+        baseX: bx,
+        baseY: by,
+        x: bx,
+        y: by,
+        z: zOffset,
+        vx: 0,
+        vy: 0,
+        mass: 1.8,
+        isAnchor: i % 2 === 0,
+        strain: 0
+      });
+    }
+
+    this.hull = {
+      id: 'quake_hyper_rotational_hull',
+      points: pts,
+      color: '#f59e0b', // Amber Slipgate aesthetic
+      tension: 0.22,
+      material: 'GOTHIC_SLIPGATE_OBSIDIAN'
+    };
+
+    // Teleporters converted to W-Axis Phase Doors!
+    this.anchors = [
+      {
+        id: 'anchor_slipgate_w_alpha',
+        x: this.center.x - 140,
+        y: this.center.y,
+        z: 40,
+        w: 50,
+        type: 'SLIPGATE_PHASE_DOOR',
+        radius: 24,
+        energyValue: 200,
+        active: true
+      },
+      {
+        id: 'anchor_slipgate_w_beta',
+        x: this.center.x + 140,
+        y: this.center.y,
+        z: 40,
+        w: -50,
+        type: 'SLIPGATE_PHASE_DOOR',
+        radius: 24,
+        energyValue: 200,
+        active: true
+      },
+      {
+        id: 'anchor_vis_chamber_core',
+        x: this.center.x,
+        y: this.center.y,
+        z: 0,
+        w: 0,
+        type: 'CORE',
+        radius: 20,
+        energyValue: 150,
+        active: true
+      }
+    ];
+
+    this.recalculateBVH();
+  }
+
+  /**
+   * Organelle 0xC5 Transpilation Catalyst 3: tesseract-fps/tesseract.git
+   * Kinetic Shear: Dynamic Octree Grid smoothed into continuous Bézier curves.
+   * Cooperative map editing natively translates to kinetic tethering.
+   */
+  public synthesizeTesseractKineticShear(): void {
+    this.topologyType = 'TESSERACT_KINETIC_SHEAR';
+    this.singularity = null;
+    const pts: SplineControlPoint[] = [];
+    const count = 16;
+    for (let i = 0; i < count; i++) {
+      const angle = (i / count) * Math.PI * 2;
+      // Octree cube smoothed into cubic Bézier curvature
+      const cubeWave = 1.0 + 0.22 * Math.cos(4 * angle);
+      const bx = this.center.x + Math.cos(angle) * this.radiusX * cubeWave;
+      const by = this.center.y + Math.sin(angle) * this.radiusY * cubeWave;
+      pts.push({
+        id: `tesseract_octree_cp_${i}`,
+        baseX: bx,
+        baseY: by,
+        x: bx,
+        y: by,
+        z: (i % 2 === 0 ? 30 : -30),
+        vx: 0,
+        vy: 0,
+        mass: 1.4,
+        isAnchor: i % 4 === 0,
+        strain: 0
+      });
+    }
+
+    this.hull = {
+      id: 'tesseract_kinetic_shear_hull',
+      points: pts,
+      color: '#10b981', // Emerald Kinetic Shear
+      tension: 0.45,
+      material: 'OCTREE_SMOOTHED_BEZIER'
+    };
+
+    // Cooperative Map Editing Kinetic Tether Anchors
+    this.anchors = [
+      {
+        id: 'anchor_octree_coop_nw',
+        x: this.center.x - 110,
+        y: this.center.y - 110,
+        z: 20,
+        w: 0,
+        type: 'KINETIC_TETHER_NODE',
+        radius: 18,
+        energyValue: 100,
+        active: true
+      },
+      {
+        id: 'anchor_octree_coop_ne',
+        x: this.center.x + 110,
+        y: this.center.y - 110,
+        z: 20,
+        w: 0,
+        type: 'KINETIC_TETHER_NODE',
+        radius: 18,
+        energyValue: 100,
+        active: true
+      },
+      {
+        id: 'anchor_octree_coop_se',
+        x: this.center.x + 110,
+        y: this.center.y + 110,
+        z: 20,
+        w: 0,
+        type: 'KINETIC_TETHER_NODE',
+        radius: 18,
+        energyValue: 100,
+        active: true
+      },
+      {
+        id: 'anchor_octree_coop_sw',
+        x: this.center.x - 110,
+        y: this.center.y + 110,
+        z: 20,
+        w: 0,
+        type: 'KINETIC_TETHER_NODE',
+        radius: 18,
+        energyValue: 100,
+        active: true
+      }
+    ];
+
+    this.recalculateBVH();
+  }
+
+  /**
+   * Organelle 0xC5 Transpilation Catalyst 4: CodeParade/MarbleMarcher.git
+   * Bare-Metal Fractal: GPU SDF ported to Q16.16 integer CORDIC.
+   * Infinite terrain manipulated by gravitational BH* singularities.
+   */
+  public synthesizeMarbleMarcherFractal(): void {
+    this.topologyType = 'MARBLE_MARCHER_FRACTAL';
+    const pts: SplineControlPoint[] = [];
+    const count = 20;
+    for (let i = 0; i < count; i++) {
+      const angle = (i / count) * Math.PI * 2;
+      // Mandelbulb/Raymarched SDF harmonic modulation
+      const sdfHarmonic = 1.0 + 0.28 * Math.sin(5 * angle) * Math.cos(2 * angle);
+      const bx = this.center.x + Math.cos(angle) * this.radiusX * 1.12 * sdfHarmonic;
+      const by = this.center.y + Math.sin(angle) * this.radiusY * 1.12 * sdfHarmonic;
+      pts.push({
+        id: `sdf_fractal_cp_${i}`,
+        baseX: bx,
+        baseY: by,
+        x: bx,
+        y: by,
+        z: 35 * Math.sin(3 * angle),
+        vx: 0,
+        vy: 0,
+        mass: 2.0,
+        isAnchor: i % 5 === 0,
+        strain: 0
+      });
+    }
+
+    this.hull = {
+      id: 'marble_marcher_sdf_hull',
+      points: pts,
+      color: '#ec4899', // Hot Pink / Fractal Neon
+      tension: 0.35,
+      material: 'Q16_RAYMARCHED_FRACTAL'
+    };
+
+    // Gravitational BH* Singularity in the heart of the fractal!
+    this.singularity = covalentBHMechanics.sys_covalent_spawn_singularity(0x00A00000, {
+      x: this.center.x,
+      y: this.center.y,
+      z: 0,
+      w: 0
+    });
+
+    this.anchors = [
+      {
+        id: 'anchor_sdf_singularity_core',
+        x: this.center.x,
+        y: this.center.y,
+        z: 0,
+        w: 0,
+        type: 'CORE',
+        radius: 26,
+        energyValue: 250,
+        active: true
+      },
+      {
+        id: 'anchor_sdf_fractal_crest_1',
+        x: this.center.x - 130,
+        y: this.center.y + 130,
+        z: 30,
+        w: 0,
+        type: 'THERMODYNAMIC_WELL',
+        radius: 16,
+        energyValue: 120,
+        active: true
+      },
+      {
+        id: 'anchor_sdf_fractal_crest_2',
+        x: this.center.x + 130,
+        y: this.center.y - 130,
+        z: -30,
+        w: 0,
+        type: 'THERMODYNAMIC_WELL',
+        radius: 16,
+        energyValue: 120,
+        active: true
+      }
+    ];
+
     this.recalculateBVH();
   }
 
