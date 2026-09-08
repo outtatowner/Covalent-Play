@@ -2285,15 +2285,15 @@ export const CyberArenaCanvas: React.FC<CyberArenaCanvasProps> = ({
           </button>
         )}
 
-        {/* Organelle 0xC5: Heritage Sieve Trigger Button */}
+        {/* Organelle 0xC6: Bidirectional FORGE Trigger Button */}
         {onOpenHeritageSieve && (
           <button
             onClick={onOpenHeritageSieve}
             className="flex items-center gap-1.5 px-2 py-1 rounded transition-colors cursor-pointer border bg-teal-950/80 text-teal-300 border-teal-500/40 hover:bg-teal-900/80"
-            title="Open Heritage Sieve Dashboard (Exogenous Git-Pipe & Archives)"
+            title="Open Bidirectional FORGE Dashboard (Covalent-Game Hub & Git-Pipe)"
           >
             <GitPullRequest className="w-3.5 h-3.5 text-teal-300" />
-            <span>0xC5 HERITAGE SIEVE</span>
+            <span>0xC6 FORGE PIPELINE</span>
           </button>
         )}
       </div>

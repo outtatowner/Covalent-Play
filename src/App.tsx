@@ -667,14 +667,14 @@ export default function App() {
             <span>SCALING MATRIX</span>
           </button>
 
-          {/* Organelle 0xC5: Heritage Sieve Dashboard (Exogenous Git Ingestion) */}
+          {/* Organelle 0xC6: Bidirectional FORGE Pipeline (Covalent-Game Hub & Git Sieve) */}
           <button
             onClick={() => setShowHeritageSieve(true)}
-            title="Organelle 0xC5_COVALENT: The Heritage Sieve Dashboard (Git-Pipe Input & 4 Archives Catalysts)"
+            title="Organelle 0xC6_COVALENT: The Bidirectional FORGE Pipeline (On-Load Sync, 0ms Cache Hit Mount, Permanent Covalent-Game.git Commit)"
             className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg font-bold transition-all cursor-pointer border bg-gradient-to-r from-teal-700 via-cyan-800 to-indigo-800 hover:from-teal-600 hover:to-indigo-700 text-cyan-100 border-cyan-400/80 shadow-md shadow-cyan-500/30 ring-1 ring-teal-400"
           >
             <GitPullRequest className="w-3.5 h-3.5 text-teal-300 animate-pulse" />
-            <span>0xC5 HERITAGE SIEVE</span>
+            <span>0xC6 BIDIRECTIONAL FORGE</span>
           </button>
 
           {/* Organelle 0xC3: Heritage Sieve E1M1 Hangar Action */}

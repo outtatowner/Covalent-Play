@@ -523,12 +523,45 @@ export interface TranspilationMatrixState {
   activeCatalystId?: string;
 }
 
-export interface ExogenousIngestEvent {
-  timestamp: number;
-  stage: TranspilationPhase;
-  message: string;
-  gitUrl: string;
-  architecture: string;
+// Organelle 0xC6_COVALENT: Bidirectional Git Sieve & Covalent-Game Hub
+export interface QbitArchiveManifest {
+  assetHash: string;
+  qbitPath: string;
+  sourceGitUrl: string;
+  title: string;
+  topology: TopologyType;
+  commitHash: string;
+  byteSize: number;
+  createdTimestamp: number;
+  transpiledType: string;
+  isRemoteSynced: boolean;
+  qbitMask: string;
+  isDirectMountAvailable: boolean;
 }
+
+export interface QuadbitPayload {
+  merkleRoot: string;
+  formatVersion: 'QBIT_V1_QUADBIT';
+  sourceGitUrl: string;
+  topology: TopologyType;
+  vertexSplinesCount: number;
+  wPhaseDoorsCount: number;
+  boundingHyperspheres: number;
+  energySavedJoules: number;
+  qbitMask: string;
+  rawBinaryBase64: string;
+}
+
+export interface BidirectionalForgeState {
+  syncStatus: 'BOOT_SYNCING' | 'IN_SYNC' | 'CHECKING_REMOTE' | 'TRANSPILE_ACTIVE' | 'PUSHING_LEDGER' | 'MOUNTED';
+  indexedArchives: QbitArchiveManifest[];
+  lastMountedQbit: QbitArchiveManifest | null;
+  lastActionType: 'CACHE_HIT_DIRECT_MOUNT' | 'FORGE_TRANSPILE_AND_PUSH' | 'SYNC_CATALOG' | 'NONE';
+  lastActionMessage: string;
+  totalEnergySavedJoules: number;
+  cacheHitCount: number;
+  transpileCount: number;
+}
+
 
 

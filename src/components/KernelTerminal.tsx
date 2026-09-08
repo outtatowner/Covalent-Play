@@ -19,7 +19,7 @@ interface KernelTerminalProps {
   be: Entity;
 }
 
-type TabType = 'C5_EXOGENOUS' | 'C4_BOOT' | 'B2_MATERIALS' | 'B2_SYNTHESIZER' | 'C_KERNEL' | 'TS_TETHER' | 'QUIPU_LEDGER';
+type TabType = 'C6_BIDIRECTIONAL' | 'C5_EXOGENOUS' | 'C4_BOOT' | 'B2_MATERIALS' | 'B2_SYNTHESIZER' | 'C_KERNEL' | 'TS_TETHER' | 'QUIPU_LEDGER';
 
 export const KernelTerminal: React.FC<KernelTerminalProps> = ({
   currentTick,
@@ -27,7 +27,7 @@ export const KernelTerminal: React.FC<KernelTerminalProps> = ({
   human,
   be
 }) => {
-  const [activeTab, setActiveTab] = useState<TabType>('C5_EXOGENOUS');
+  const [activeTab, setActiveTab] = useState<TabType>('C6_BIDIRECTIONAL');
 
   return (
     <div className="bg-[#090d16] border border-[#1e293b] rounded-xl p-4 flex flex-col gap-3 font-mono shadow-xl text-slate-200">
@@ -39,12 +39,22 @@ export const KernelTerminal: React.FC<KernelTerminalProps> = ({
             BARE-METAL RING-0 // ORGANELLE SOURCE
           </h2>
           <span className="text-[10px] px-2 py-0.5 rounded bg-cyan-950 text-cyan-400 border border-cyan-800 font-bold">
-            0xC5 EXOGENOUS PIPE
+            0xC6 BIDIRECTIONAL FORGE
           </span>
         </div>
 
         {/* Tab switcher */}
         <div className="flex flex-wrap gap-1 bg-[#05070c] p-1 rounded-lg border border-[#1e293b] text-xs">
+          <button
+            onClick={() => setActiveTab('C6_BIDIRECTIONAL')}
+            className={`px-2.5 py-1 rounded transition-colors cursor-pointer ${
+              activeTab === 'C6_BIDIRECTIONAL'
+                ? 'bg-gradient-to-r from-teal-600 via-cyan-600 to-indigo-600 text-white font-bold shadow-sm shadow-cyan-500/30'
+                : 'text-slate-400 hover:text-slate-200'
+            }`}
+          >
+            node_0xBIDIRECTIONAL_FORGE.ts
+          </button>
           <button
             onClick={() => setActiveTab('C5_EXOGENOUS')}
             className={`px-2.5 py-1 rounded transition-colors cursor-pointer ${
@@ -120,6 +130,33 @@ export const KernelTerminal: React.FC<KernelTerminalProps> = ({
 
       {/* Code Display Area */}
       <div className="bg-[#05070c] rounded-lg p-3 border border-[#1e293b] text-xs overflow-x-auto max-h-60 leading-relaxed font-mono">
+        {activeTab === 'C6_BIDIRECTIONAL' && (
+          <pre className="text-slate-300">
+            <span className="text-slate-500">// node_0xBIDIRECTIONAL_FORGE.ts (Organelle 0xC6_COVALENT)</span>{'\n'}
+            <span className="text-purple-400">export class</span> <span className="text-yellow-400">CovalentGameHub</span> {'{'}{'\n'}
+            {'    '}<span className="text-purple-400">public async</span> <span className="text-emerald-400 font-bold">mountOrTranspile</span>(sourceGitUrl: <span className="text-cyan-400">string</span>): <span className="text-cyan-400">Promise&lt;void&gt;</span> {'{'}{'\n'}
+            {'        '}<span className="text-blue-400">const</span> assetHash = <span className="text-cyan-300">sys_covalent_generate_merkle_root</span>(sourceGitUrl);{'\n'}
+            {'        '}<span className="text-blue-400">const</span> qbitPath = <span className="text-emerald-300">`transpiled_assets/${'{'}assetHash{'}'}.qbit`</span>;{'\n\n'}
+            {'        '}<span className="text-slate-500">// 1. Check permanent storage (Covalent-Game repo)</span>{'\n'}
+            {'        '}<span className="text-purple-400">if</span> (<span className="text-purple-400">await</span> <span className="text-cyan-300">sys_covalent_git_check_remote</span>(qbitPath)) {'{'}{'\n'}
+            {'            '}console.log(<span className="text-emerald-300">`[ LEDGER ] 4D Manifold found. Loading directly to Ring-0.`</span>);{'\n'}
+            {'            '}<span className="text-cyan-300">sys_covalent_mount_qbit_to_engine</span>(qbitPath);{'\n'}
+            {'            '}<span className="text-purple-400">return</span>;{'\n'}
+            {'        '}{'}'}{'\n\n'}
+            {'        '}<span className="text-slate-500">// 2. Transpile via FORGE (One-Time Execution)</span>{'\n'}
+            {'        '}console.log(<span className="text-emerald-300">`[ FORGE ] Asset unmapped. Initiating Heritage Sieve...`</span>);{'\n'}
+            {'        '}<span className="text-blue-400">const</span> rawData = <span className="text-purple-400">await</span> <span className="text-cyan-300">sys_covalent_fetch_git_buffer</span>(sourceGitUrl);{'\n'}
+            {'        '}<span className="text-blue-400">const</span> quadbitArchive = <span className="text-purple-400">await</span> <span className="text-cyan-300">sys_covalent_transpile_to_qbit</span>(rawData);{'\n\n'}
+            {'        '}<span className="text-slate-500">// 3. Bidirectional Push to Permanent Ledger</span>{'\n'}
+            {'        '}<span className="text-purple-400">await</span> <span className="text-cyan-300">sys_covalent_git_commit_and_push</span>(qbitPath, quadbitArchive);{'\n'}
+            {'        '}console.log(<span className="text-emerald-300">`[ 1 === 1 ] Manifold permanently archived to Covalent-Game.git`</span>);{'\n\n'}
+            {'        '}<span className="text-slate-500">// 4. Execute</span>{'\n'}
+            {'        '}<span className="text-cyan-300">sys_covalent_mount_qbit_to_engine</span>(qbitPath);{'\n'}
+            {'    '}{'}'}{'\n'}
+            {'}'}
+          </pre>
+        )}
+
         {activeTab === 'C5_EXOGENOUS' && (
           <pre className="text-slate-300">
             <span className="text-slate-500">// node_0xEXOGENOUS_PIPE.ts (Organelle 0xC5_COVALENT)</span>{'\n'}
