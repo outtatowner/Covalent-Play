@@ -353,7 +353,8 @@ export type QbitShaderMask =
   | 'FRACTAL_NOISE_SLIME'
   | 'CORDIC_OBSIDIAN'
   | 'QBIT_HAZARD_STRIP'
-  | 'ALGORITHMIC_COMPUTER_PANEL';
+  | 'ALGORITHMIC_COMPUTER_PANEL'
+  | 'VORONOI_FRACTAL_DEPTH';
 
 export type HeritageEntityType =
   | 'IMP_HERITAGE'
@@ -412,5 +413,48 @@ export interface HeritageE1M1Archive {
   hull: SplineHull;
   anchors: TetherAnchor[];
   timestamp: number;
+}
+
+// Organelle 0xC4_COVALENT: Bare-Metal Scaling Matrix & Unified Boot Types
+export type ScalingSubstrateMode = 'MINIMUM_SUBSTRATE' | 'INFINITE_SCALING_PARITY';
+
+export interface ScalingMatrixRow {
+  parameter: 'Silicon Requirements' | 'Memory / Storage' | 'Render Engine';
+  minimumSubstrate: string;
+  infiniteScalingParity: string;
+  activeStatus: string;
+}
+
+export interface GAME_DATA_lump_t {
+  name: string;
+  byteLength: number;
+  recordsCount: number;
+  checksumQ16: number;
+  rawBytes?: Uint8Array;
+}
+
+export interface BVHNode4D {
+  id: string;
+  min: FloatVector4D;
+  max: FloatVector4D;
+  isLeaf: boolean;
+  entityId?: string;
+  children?: [BVHNode4D, BVHNode4D];
+}
+
+export interface C4BootSequenceState {
+  isBooting: boolean;
+  currentStep: number; // 0: Idle, 1: Substrate Init, 2: BSP Transpilation, 3: Entity Ledger, 4: BVH Recalculation, 5: Complete
+  stepLabels: [string, string, string, string];
+  stepDetails: [string, string, string, string];
+  completedSteps: boolean[];
+  bootTimestamp: number;
+  invariantParity: boolean; // 1 === 1 validated
+  substrateMode: ScalingSubstrateMode;
+  ramUsageMB: number;
+  storageUsageMB: number;
+  bvhNodesCount: number;
+  causticsFlux: number;
+  voronoiCellCount: number;
 }
 

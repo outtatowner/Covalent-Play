@@ -27,6 +27,8 @@ import { ThermodynamicBankHUD } from './components/ThermodynamicBankHUD';
 import { BeInstanceArbitrator } from './components/BeInstanceArbitrator';
 import { KernelTerminal } from './components/KernelTerminal';
 import { CyberAthleticManualModal } from './components/CyberAthleticManualModal';
+import { BareMetalScalingMatrixModal } from './components/BareMetalScalingMatrixModal';
+import { covalentUnifiedBoot } from './engine/node_0xC4_UNIFIED_BOOT';
 
 import {
   Volume2,
@@ -46,7 +48,8 @@ import {
   Orbit,
   Shield,
   Disc,
-  BookOpen
+  BookOpen,
+  Cpu
 } from 'lucide-react';
 
 export default function App() {
@@ -98,6 +101,7 @@ export default function App() {
   const [selectedTopology, setSelectedTopology] = useState<TopologyType>('CONTINUOUS_TRI_STATE_GAUNTLET');
   const [compileFlash, setCompileFlash] = useState<boolean>(false);
   const [showManual, setShowManual] = useState<boolean>(false);
+  const [showScalingMatrix, setShowScalingMatrix] = useState<boolean>(false);
 
   // Key state tracking
   const keysPressed = useRef<{ [key: string]: boolean }>({});
@@ -383,6 +387,33 @@ export default function App() {
     setTimeout(() => setCompileFlash(false), 900);
   };
 
+  // Organelle 0xC4_COVALENT Unified Boot Command: sys_covalent_hypervisor_boot
+  const handleUnifiedBootExecute = () => {
+    setSelectedTopology('HERITAGE_E1M1_HANGAR');
+    arena.synthesizeHeritageE1M1Hangar();
+    covalentUnifiedBoot.sys_covalent_hypervisor_boot();
+    human.x = arena.center.x - 120;
+    human.y = arena.center.y + 120;
+    human.z = 0;
+    human.w = 0;
+    human.vx = 0;
+    human.vy = 0;
+    human.vz = 0;
+    human.vw = 0;
+    beEngine.entity.x = arena.center.x + 120;
+    beEngine.entity.y = arena.center.y - 120;
+    beEngine.entity.z = 24;
+    beEngine.entity.w = 0;
+    beEngine.entity.vx = 0;
+    beEngine.entity.vy = 0;
+    beEngine.entity.vz = 0;
+    beEngine.entity.vw = 0;
+    cyberAudio.playConstructiveResonance();
+    beEngine.addLog('ORGANELLE 0xC4_COVALENT UNIFIED BOOT EXECUTED: sys_covalent_hypervisor_boot() [Bare-Metal Substrate Ignited | 1===1 Invariant]', 'BOOT_0xC4', tickRef.current);
+    setCompileFlash(true);
+    setTimeout(() => setCompileFlash(false), 900);
+  };
+
   // Dedicated BH* Accretion Maze Compile (Hawking Radiation Extrusion)
   const handleBHAccretionCompile = () => {
     setSelectedTopology('BH_STAR_ACCRETION_DISK');
@@ -587,6 +618,26 @@ export default function App() {
 
         {/* Action Controls & Topologies */}
         <div className="flex flex-wrap items-center gap-2 font-mono text-xs">
+          {/* Organelle 0xC4: Unified Boot Command Action */}
+          <button
+            onClick={handleUnifiedBootExecute}
+            title="Organelle 0xC4_COVALENT: Unified Boot Command (sys_covalent_hypervisor_boot: Substrate Init -> Z-Loft & W-Inject -> Hypersphere Intercept -> 4D BVH Sieve)"
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg font-bold transition-all cursor-pointer border bg-gradient-to-r from-cyan-600 via-teal-600 to-emerald-600 hover:from-cyan-500 hover:to-emerald-500 text-white border-cyan-300 shadow-lg shadow-cyan-500/40 scale-105 ring-1 ring-cyan-300"
+          >
+            <Cpu className="w-3.5 h-3.5 text-cyan-200 animate-spin" />
+            <span>0xC4 UNIFIED BOOT</span>
+          </button>
+
+          {/* Bare-Metal Scaling Matrix Dashboard Button */}
+          <button
+            onClick={() => setShowScalingMatrix(true)}
+            title="Bare-Metal Scaling Matrix: Compare 32-bit ARM/x86 Minimum Substrate vs 64-Core Threadripper Infinite Parity"
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg font-bold transition-all cursor-pointer border bg-[#0d1627] hover:bg-[#13223f] text-cyan-300 border-cyan-500/50 shadow-md"
+          >
+            <Layers className="w-3.5 h-3.5 text-cyan-400" />
+            <span>SCALING MATRIX</span>
+          </button>
+
           {/* Organelle 0xC3: Heritage Sieve E1M1 Hangar Action */}
           <button
             onClick={handleHeritageE1M1Compile}
@@ -932,6 +983,7 @@ export default function App() {
             showCoordinates={showCoordinates}
             onTetherCreated={() => {}}
             onShearApplied={() => {}}
+            onOpenScalingMatrix={() => setShowScalingMatrix(true)}
           />
 
           {/* Mobile On-Screen Virtual 6DOF Controls */}
@@ -1063,6 +1115,15 @@ export default function App() {
         currentTopology={selectedTopology}
         onSelectTopology={handleTopologySelect}
         onBeModeChange={(mode) => beEngine.setMode(mode)}
+      />
+
+      {/* Bare-Metal Scaling Matrix & Organelle 0xC4 Boot Modal */}
+      <BareMetalScalingMatrixModal
+        isOpen={showScalingMatrix}
+        onClose={() => setShowScalingMatrix(false)}
+        onBootExecuted={() => {
+          handleUnifiedBootExecute();
+        }}
       />
     </div>
   );

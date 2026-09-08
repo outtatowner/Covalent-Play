@@ -31,8 +31,9 @@ import {
 import { covalentBHMechanics } from '../engine/covalent_bh_mechanics';
 import { bhLevelGenerator } from '../engine/node_0xBH_ACCRETION_SYNTHESIZER';
 import { heritageSieveEngine } from '../engine/node_0xHERITAGE_OFFICIATOR';
+import { covalentUnifiedBoot } from '../engine/node_0xC4_UNIFIED_BOOT';
 import { BlackHoleSingularity } from '../types';
-import { Orbit, Compass, Eye, Shield, Zap, Sparkles, Layers, Disc } from 'lucide-react';
+import { Orbit, Compass, Eye, Shield, Zap, Sparkles, Layers, Disc, Cpu } from 'lucide-react';
 
 interface CyberArenaCanvasProps {
   arena: ArenaForge;
@@ -44,6 +45,7 @@ interface CyberArenaCanvasProps {
   showCoordinates: boolean;
   onTetherCreated: () => void;
   onShearApplied: () => void;
+  onOpenScalingMatrix?: () => void;
 }
 
 // Color interpolation for thermodynamic dV/dt strain: Cold Cyan -> Electric Violet -> Warning Crimson
@@ -127,7 +129,8 @@ export const CyberArenaCanvas: React.FC<CyberArenaCanvasProps> = ({
   showBVH,
   showCoordinates,
   onTetherCreated,
-  onShearApplied
+  onShearApplied,
+  onOpenScalingMatrix
 }) => {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
 
@@ -814,6 +817,38 @@ export const CyberArenaCanvas: React.FC<CyberArenaCanvasProps> = ({
               ctx.restore();
             }
           });
+
+          // 4. Multithreaded CORDIC Path-Tracing Caustics (Infinite Scaling Parity)
+          if (covalentUnifiedBoot.substrateMode === 'INFINITE_SCALING_PARITY') {
+            const caustics = covalentUnifiedBoot.getCausticsPoints(arena.center.x, arena.center.y, 220, currentTick);
+            if (caustics.length > 0) {
+              ctx.save();
+              ctx.beginPath();
+              caustics.forEach((cp, idx) => {
+                const p = proj(cp.x, cp.y, -30);
+                if (p.visible) {
+                  if (idx === 0) ctx.moveTo(p.sx, p.sy);
+                  else ctx.lineTo(p.sx, p.sy);
+                }
+              });
+              ctx.closePath();
+              ctx.strokeStyle = `rgba(56, 189, 248, ${0.28 + 0.12 * Math.sin(currentTick * 0.05)})`;
+              ctx.lineWidth = 1.6;
+              ctx.stroke();
+
+              // Secondary Caustic Nodes
+              caustics.forEach(cp => {
+                const p = proj(cp.x, cp.y, -30);
+                if (p.visible) {
+                  ctx.beginPath();
+                  ctx.arc(p.sx, p.sy, 2.5 * p.scale, 0, Math.PI * 2);
+                  ctx.fillStyle = `rgba(168, 85, 247, ${cp.intensity * 0.5})`;
+                  ctx.fill();
+                }
+              });
+              ctx.restore();
+            }
+          }
 
           ctx.restore();
         } else {
@@ -2065,6 +2100,22 @@ export const CyberArenaCanvas: React.FC<CyberArenaCanvasProps> = ({
         >
           RESET CAM
         </button>
+
+        {/* Bare-Metal Substrate Mode Indicator */}
+        {onOpenScalingMatrix && (
+          <button
+            onClick={onOpenScalingMatrix}
+            className={`flex items-center gap-1.5 px-2 py-1 rounded transition-colors cursor-pointer border ${
+              covalentUnifiedBoot.substrateMode === 'INFINITE_SCALING_PARITY'
+                ? 'bg-cyan-950/80 text-cyan-300 border-cyan-500/40 hover:bg-cyan-900/80'
+                : 'bg-amber-950/80 text-amber-300 border-amber-500/40 hover:bg-amber-900/80'
+            }`}
+            title="Inspect Bare-Metal Scaling Matrix & Organelle 0xC4 Boot"
+          >
+            <Cpu className="w-3.5 h-3.5" />
+            <span>{covalentUnifiedBoot.substrateMode === 'INFINITE_SCALING_PARITY' ? 'PARITY: 64-CORE/8K' : 'SUBSTRATE: 32-BIT/<16MB'}</span>
+          </button>
+        )}
       </div>
 
       {/* Top-Right Invariant Status */}

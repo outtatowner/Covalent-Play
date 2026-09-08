@@ -19,7 +19,7 @@ interface KernelTerminalProps {
   be: Entity;
 }
 
-type TabType = 'B2_MATERIALS' | 'B2_SYNTHESIZER' | 'C_KERNEL' | 'TS_TETHER' | 'QUIPU_LEDGER';
+type TabType = 'C4_BOOT' | 'B2_MATERIALS' | 'B2_SYNTHESIZER' | 'C_KERNEL' | 'TS_TETHER' | 'QUIPU_LEDGER';
 
 export const KernelTerminal: React.FC<KernelTerminalProps> = ({
   currentTick,
@@ -27,7 +27,7 @@ export const KernelTerminal: React.FC<KernelTerminalProps> = ({
   human,
   be
 }) => {
-  const [activeTab, setActiveTab] = useState<TabType>('B2_MATERIALS');
+  const [activeTab, setActiveTab] = useState<TabType>('C4_BOOT');
 
   return (
     <div className="bg-[#090d16] border border-[#1e293b] rounded-xl p-4 flex flex-col gap-3 font-mono shadow-xl text-slate-200">
@@ -38,13 +38,23 @@ export const KernelTerminal: React.FC<KernelTerminalProps> = ({
           <h2 className="text-sm font-semibold tracking-wider text-cyan-400">
             BARE-METAL RING-0 // ORGANELLE SOURCE
           </h2>
-          <span className="text-[10px] px-2 py-0.5 rounded bg-cyan-950 text-cyan-400 border border-cyan-800">
-            0xB2 COVALENT ACTIVE
+          <span className="text-[10px] px-2 py-0.5 rounded bg-cyan-950 text-cyan-400 border border-cyan-800 font-bold">
+            0xC4 COVALENT UNIFIED
           </span>
         </div>
 
         {/* Tab switcher */}
         <div className="flex flex-wrap gap-1 bg-[#05070c] p-1 rounded-lg border border-[#1e293b] text-xs">
+          <button
+            onClick={() => setActiveTab('C4_BOOT')}
+            className={`px-2.5 py-1 rounded transition-colors cursor-pointer ${
+              activeTab === 'C4_BOOT'
+                ? 'bg-gradient-to-r from-cyan-600 to-emerald-600 text-white font-bold shadow-sm shadow-cyan-500/30'
+                : 'text-slate-400 hover:text-slate-200'
+            }`}
+          >
+            node_0xC4_UNIFIED_BOOT.ts
+          </button>
           <button
             onClick={() => setActiveTab('B2_MATERIALS')}
             className={`px-2.5 py-1 rounded transition-colors cursor-pointer ${
@@ -100,6 +110,37 @@ export const KernelTerminal: React.FC<KernelTerminalProps> = ({
 
       {/* Code Display Area */}
       <div className="bg-[#05070c] rounded-lg p-3 border border-[#1e293b] text-xs overflow-x-auto max-h-60 leading-relaxed font-mono">
+        {activeTab === 'C4_BOOT' && (
+          <pre className="text-slate-300">
+            <span className="text-slate-500">// node_0xC4_UNIFIED_BOOT.ts (Organelle 0xC4_COVALENT)</span>{'\n'}
+            <span className="text-slate-500">// Bare-Metal Scaling Matrix & Unified Boot Hypervisor Sequence</span>{'\n'}
+            <span className="text-purple-400">void</span> <span className="text-emerald-400 font-bold">sys_covalent_hypervisor_boot</span>(<span className="text-blue-400">void</span>) {'{'}{'\n'}
+            {'    '}<span className="text-slate-500">// 1. Initialize Substrate: Ring-0 /dev/fb0 Direct DMA &lt;16MB</span>{'\n'}
+            {'    '}<span className="text-cyan-300">sys_init_bare_metal_framebuffer</span>();{'\n'}
+            {'    '}<span className="text-cyan-300">sys_cordic_tables_init</span>();{'\n\n'}
+            {'    '}<span className="text-slate-500">// 2. Transpile Heritage Sieve BSP Lump</span>{'\n'}
+            {'    '}<span className="text-cyan-400">GAME_DATA_lump_t</span> *bsp_lump = <span className="text-cyan-300">sys_load_lump</span>(<span className="text-amber-400">"E1M1_HANGAR"</span>);{'\n'}
+            {'    '}<span className="text-purple-400">for</span> (<span className="text-cyan-400">int</span> i = <span className="text-amber-400">0</span>; i &lt; bsp_lump-&gt;num_lines; i++) {'{'}{'\n'}
+            {'        '}<span className="text-slate-500">// Z-Lofting 2D vertices to Q16.16 3D splines</span>{'\n'}
+            {'        '}<span className="text-cyan-400">Spline3D</span> *spline = <span className="text-cyan-300">sys_loft_sector_heights</span>(&amp;bsp_lump-&gt;lines[i]);{'\n'}
+            {'        '}<span className="text-slate-500">// W-Axis Injection: Anchor to Phase W=0</span>{'\n'}
+            {'        '}<span className="text-cyan-300">sys_inject_w_axis</span>(spline, <span className="text-amber-400">0.0f</span>);{'\n'}
+            {'        '}<span className="text-slate-500">// Algorithmic Albedo: Voronoi fractal procedural shader</span>{'\n'}
+            {'        '}<span className="text-cyan-300">sys_apply_qbit_mask</span>(spline, <span className="text-emerald-400">VORONOI_FRACTAL_DEPTH</span>);{'\n'}
+            {'    '}{'}'}{'\n\n'}
+            {'    '}<span className="text-slate-500">// 3. Intercept Entities &amp; Bind Thermodynamic Ledgers</span>{'\n'}
+            {'    '}<span className="text-purple-400">for</span> (<span className="text-cyan-400">int</span> i = <span className="text-amber-400">0</span>; i &lt; bsp_lump-&gt;num_things; i++) {'{'}{'\n'}
+            {'        '}<span className="text-cyan-300">sys_extrude_hypersphere_bounds</span>(&amp;bsp_lump-&gt;things[i]);{'\n'}
+            {'        '}<span className="text-cyan-300">sys_bind_dV_dt_limit</span>(&amp;bsp_lump-&gt;things[i], <span className="text-amber-400">0x00000000</span>); <span className="text-slate-500">// dV/dt &lt;= 0</span>{'\n'}
+            {'    '}{'}'}{'\n\n'}
+            {'    '}<span className="text-slate-500">// 4. Build 4D BVH for Collision &amp; Sieve Rollback</span>{'\n'}
+            {'    '}<span className="text-cyan-300">sys_build_4d_bvh</span>(splines, entities);{'\n'}
+            {'    '}<span className="text-slate-500">// Core Invariant: 1 === 1 (Absolute Mathematical Parity)</span>{'\n'}
+            {'    '}<span className="text-purple-400">assert</span>(<span className="text-amber-400">1</span> === <span className="text-amber-400">1</span>);{'\n'}
+            {'}'}
+          </pre>
+        )}
+
         {activeTab === 'B2_MATERIALS' && (
           <pre className="text-slate-300">
             <span className="text-slate-500">/* kernel/covalent_arena_materials.c */</span>{'\n'}
