@@ -10,7 +10,7 @@
  */
 
 import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
-import { Entity, BeStateMode, FloatVector } from './types';
+import { Entity, BeStateMode, FloatVector, WorkspaceTabMode } from './types';
 import { ArenaForge, TopologyType } from './engine/arena_forge';
 import { CyberAthleticTethering } from './engine/vector_tether';
 import { BeInstanceEngine } from './engine/be_instance';
@@ -29,6 +29,8 @@ import { KernelTerminal } from './components/KernelTerminal';
 import { CyberAthleticManualModal } from './components/CyberAthleticManualModal';
 import { BareMetalScalingMatrixModal } from './components/BareMetalScalingMatrixModal';
 import { HeritageSieveDashboard } from './components/HeritageSieveDashboard';
+import { QcnlArbiterDashboard } from './components/QcnlArbiterDashboard';
+import { OmniSieveDashboard } from './components/OmniSieveDashboard';
 import { covalentUnifiedBoot } from './engine/node_0xC4_UNIFIED_BOOT';
 
 import {
@@ -51,7 +53,9 @@ import {
   Disc,
   BookOpen,
   Cpu,
-  GitPullRequest
+  GitPullRequest,
+  Gamepad2,
+  Sparkles
 } from 'lucide-react';
 
 export default function App() {
@@ -105,6 +109,9 @@ export default function App() {
   const [showManual, setShowManual] = useState<boolean>(false);
   const [showScalingMatrix, setShowScalingMatrix] = useState<boolean>(false);
   const [showHeritageSieve, setShowHeritageSieve] = useState<boolean>(false);
+  const [heritageInitialTab, setHeritageInitialTab] = useState<WorkspaceTabMode>('TAB_A_FORGE_TELEMETRY');
+  const [showQcnlDashboard, setShowQcnlDashboard] = useState<boolean>(false);
+  const [showOmniSieve, setShowOmniSieve] = useState<boolean>(false);
 
   // Key state tracking
   const keysPressed = useRef<{ [key: string]: boolean }>({});
@@ -669,12 +676,48 @@ export default function App() {
 
           {/* Organelle 0xC6: Bidirectional FORGE Pipeline (Covalent-Game Hub & Git Sieve) */}
           <button
-            onClick={() => setShowHeritageSieve(true)}
+            onClick={() => {
+              setHeritageInitialTab('TAB_A_FORGE_TELEMETRY');
+              setShowHeritageSieve(true);
+            }}
             title="Organelle 0xC6_COVALENT: The Bidirectional FORGE Pipeline (On-Load Sync, 0ms Cache Hit Mount, Permanent Covalent-Game.git Commit)"
             className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg font-bold transition-all cursor-pointer border bg-gradient-to-r from-teal-700 via-cyan-800 to-indigo-800 hover:from-teal-600 hover:to-indigo-700 text-cyan-100 border-cyan-400/80 shadow-md shadow-cyan-500/30 ring-1 ring-teal-400"
           >
             <GitPullRequest className="w-3.5 h-3.5 text-teal-300 animate-pulse" />
             <span>0xC6 BIDIRECTIONAL FORGE</span>
+          </button>
+
+          {/* Organelle 0xC7: Heritage Play Shard (1===1 Zero-Latency Playable Instance) */}
+          <button
+            onClick={() => {
+              setHeritageInitialTab('TAB_B_PLAYABLE_HERITAGE');
+              setShowHeritageSieve(true);
+            }}
+            title="Organelle 0xC7_COVALENT: Heritage Play Shard (1===1 Clamped Dynamics, Tactile Helm or Autonomous Be <> Speedrunner, Discrete Q16.16 Quipu Ledger)"
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg font-bold transition-all cursor-pointer border bg-gradient-to-r from-purple-800 via-indigo-800 to-teal-800 hover:from-purple-700 hover:to-indigo-700 text-purple-100 border-purple-400/80 shadow-md shadow-purple-500/30 ring-1 ring-purple-400"
+          >
+            <Gamepad2 className="w-3.5 h-3.5 text-purple-300 animate-bounce" />
+            <span>0xC7 HERITAGE PLAY SHARD</span>
+          </button>
+
+          {/* Organelle 0xC8: QCNL Transpiler & Stasis Arbitration Engine */}
+          <button
+            onClick={() => setShowQcnlDashboard(true)}
+            title="Organelle 0xC8_COVALENT: QCNL Transpiler & Arbiter Bridge (Affine C-to-QCML Extraction, Ring0 Congruence Gate theta > 0.95, Mesh Stasis Protocol, /dev/fb0 Amber CRT Driver)"
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg font-bold transition-all cursor-pointer border bg-gradient-to-r from-amber-700 via-orange-800 to-amber-900 hover:from-amber-600 hover:to-orange-700 text-amber-100 border-amber-400/90 shadow-md shadow-amber-500/30 ring-1 ring-amber-400"
+          >
+            <Cpu className="w-3.5 h-3.5 text-amber-300 animate-pulse" />
+            <span>0xC8 QCNL ARBITER</span>
+          </button>
+
+          {/* Organelle 0xC9: CQNL-Omni Polyglot Sieve & Hypervisor */}
+          <button
+            onClick={() => setShowOmniSieve(true)}
+            title="Organelle 0xC9_COVALENT: Omni-Sieve Orchestrator (Universal Ingestion for JS/Python/Verilog, Banach Sieve dV/dt <= 0 Thermodynamic Arbitration, Multi-Target Emission to C/Rust/JS/Verilog/Opcodes)"
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg font-bold transition-all cursor-pointer border bg-gradient-to-r from-cyan-700 via-blue-800 to-indigo-900 hover:from-cyan-600 hover:to-blue-700 text-cyan-100 border-cyan-400/90 shadow-md shadow-cyan-500/30 ring-1 ring-cyan-400"
+          >
+            <Sparkles className="w-3.5 h-3.5 text-cyan-300 animate-pulse" />
+            <span>0xC9 OMNI SIEVE</span>
           </button>
 
           {/* Organelle 0xC3: Heritage Sieve E1M1 Hangar Action */}
@@ -1166,11 +1209,24 @@ export default function App() {
         }}
       />
 
-      {/* Organelle 0xC5: The Heritage Sieve Dashboard Modal */}
+      {/* Organelle 0xC6 & 0xC7: The Heritage Sieve Dashboard & Play Shard Modal */}
       <HeritageSieveDashboard
         isOpen={showHeritageSieve}
         onClose={() => setShowHeritageSieve(false)}
         onAssimilateTopology={handleAssimilateTopology}
+        initialTab={heritageInitialTab}
+      />
+
+      {/* Organelle 0xC8: QCNL Transpiler & Stasis Arbitration Dashboard Modal */}
+      <QcnlArbiterDashboard
+        isOpen={showQcnlDashboard}
+        onClose={() => setShowQcnlDashboard(false)}
+      />
+
+      {/* Organelle 0xC9: CQNL-Omni Polyglot Sieve & Hypervisor Dashboard Modal */}
+      <OmniSieveDashboard
+        isOpen={showOmniSieve}
+        onClose={() => setShowOmniSieve(false)}
       />
     </div>
   );

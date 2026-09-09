@@ -608,5 +608,162 @@ export interface HeritagePlayState {
   activeManifest: QbitArchiveManifest | null;
 }
 
+// Organelle 0xC8_COVALENT: QCNL Transpiler & Arbiter Types
+export enum QCML_OP {
+  STAS = 0x0, // Stasis contractive hold (dV/dt = 0)
+  SMUL = 0x1, // Scalar multiplication contractive damping
+  LYAP = 0x2, // Lyapunov gradient descent verification
+  BAN3 = 0x3, // 3-Band energy dissipation limiter
+  ROTR = 0x4, // 2D planar rotation step
+  CORD = 0x5, // CORDIC vector projection
+  DAMP = 0x6, // Kinetic momentum damping
+  CLMP = 0x7, // Discrete limit clamp
+  INVT = 0x8, // Invariant parity assertion (1 === 1)
+  PROJ = 0x9, // Projection to contractive manifold
+  DIFF = 0xA, // Differential decay
+  TETH = 0xB, // Vector tether energy dissipation
+  MERK = 0xC, // Merkle tree verification
+  Q16F = 0xD, // Q16.16 fixed-point operation
+  ZERO = 0xE, // Zero-phase W-axis clamp
+  HALT = 0xF  // Contractive barrier halt
+}
+
+export interface C2qArbiterResult {
+  granted: boolean;
+  theta: number;              // Congruence metric (must be > 0.95 to pass)
+  thetaQ16: number;           // Fixed-point representation (e.g. 0x0000F333)
+  lyapunovDeltaV: number;     // dV/dt energy derivative (must be <= 0)
+  isContractive: boolean;
+  status: 'GRANTED' | 'DENIED';
+  message: string;
+  cyclesElapsed: number;
+  dissipationJoules: number;
+  timestamp: number;
+}
+
+export interface C2qProgram {
+  sourceSnippet: string;
+  extractedAffineOps: string[];
+  opcodes: QCML_OP[];
+  packedWord: bigint;         // 64-bit covalent_quadbit_word_t
+  packedHex: string;
+  merkleHash: string;
+}
+
+export interface StasisChallenge {
+  id: string;
+  challengerNode: string;     // e.g. "peer-ring3-0x89"
+  cFragment: string;
+  proposedWord: string;
+  theta: number;
+  lyapunovDeltaV: number;
+  status: 'PENDING' | 'GRANTED' | 'DENIED';
+  timestamp: number;
+  arbitratedAt?: number;
+  signature: string;
+}
+
+export interface QcnlEngineState {
+  currentProgram: C2qProgram | null;
+  arbiterResult: C2qArbiterResult | null;
+  history: {
+    program: C2qProgram;
+    result: C2qArbiterResult;
+  }[];
+  activeChallenges: StasisChallenge[];
+  totalTranspiled: number;
+  totalGranted: number;
+  totalDenied: number;
+  amberFramebufferActive: boolean;
+  selectedPresetIndex: number;
+}
+
+// Organelle 0xC9_COVALENT: CQNL-Omni Polyglot Sieve & Hypervisor Types
+export interface AffineAssign {
+  target: string;
+  scale: number;
+  const: number;
+}
+
+export interface CQNLIntent {
+  source_lang: string;
+  source_hash: string;
+  organelle: string;
+  assigns: AffineAssign[];
+  opcodes: number[];
+  notes: string[];
+  meta: Record<string, any>;
+}
+
+export interface AffineSystem {
+  var_names: string[];
+  A: number[][]; // n x n transition matrix
+  b: number[];   // n dimensional bias vector
+  n: number;
+}
+
+export interface BanachSieveResult {
+  passed: boolean;
+  norm_1: number;
+  norm_inf: number;
+  max_norm: number;
+  message: string;
+  system?: AffineSystem;
+}
+
+export type OmniTargetLanguage = 
+  | 'c'
+  | 'rust'
+  | 'javascript'
+  | 'verilog'
+  | 'opcodes'
+  | 'python'
+  | 'cpp'
+  | 'wasm'
+  | 'asm'
+  | 'go'
+  | 'cqnl'
+  | 'json'
+  | 'java'
+  | 'csharp';
+
+export interface OmniTranspileResult {
+  source_lang: string;
+  target_lang: OmniTargetLanguage;
+  intent: CQNLIntent;
+  airSystem: AffineSystem;
+  sieveResult: BanachSieveResult;
+  emittedCode: string;
+  status: 'GRANTED' | 'DENIED';
+  timestamp: number;
+  filename: string;
+}
+
+export interface OmniLedgerEntry {
+  id: string;
+  sourceLang: string;
+  targetLang: OmniTargetLanguage;
+  filename: string;
+  sourceHash: string;
+  normMax: number;
+  status: 'GRANTED' | 'DENIED';
+  timestamp: number;
+  codeLength: number;
+}
+
+export interface OmniSieveState {
+  currentSourceText: string;
+  currentSourceLang: string;
+  currentTargetLang: OmniTargetLanguage;
+  currentResult: OmniTranspileResult | null;
+  history: OmniTranspileResult[];
+  ledger: OmniLedgerEntry[];
+  selectedPresetId: string;
+  totalTranspiled: number;
+  totalPassed: number;
+  totalRejected: number;
+}
+
+
 
 
