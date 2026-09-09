@@ -1,6 +1,6 @@
 {
   "name": "Covalent-Play",
-  "description": "Zero-latency deterministic cyber-athletics engine featuring 4D Rollback Netcode, Organelle 0xC7 Heritage Play Shard, Organelle 0xC8 QCNL Arbiter, and Organelle 0xC9 CQNL-Omni Universal Polyglot Sieve & Hypervisor.",
+  "description": "Zero-latency deterministic cyber-athletics engine featuring 4D Rollback Netcode, Organelle 0xC8 QCNL Arbiter, Organelle 0xC9 Polyglot Sieve, and Organelle 0xCA Omni-Data Sieve (Universal QCNL Asset & BFT Protocol Abstraction).",
   "requestFramePermissions": [],
   "majorCapabilities": [
     "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"

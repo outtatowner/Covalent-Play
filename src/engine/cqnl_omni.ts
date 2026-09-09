@@ -207,6 +207,116 @@ export class OmniFrontend {
       meta: { hw_path: isHw }
     };
   }
+
+  /**
+   * Organelle 0xCA: Universal Data-to-AIR Abstractor
+   * Flattens arbitrary non-executable data (Assets, P2P Rollback Packets, State Classes)
+   * into a contractive Affine System: x_{k+1} = A x_k + b
+   */
+  public static parseDataToAir(
+    payload: Uint8Array | string | Record<string, unknown> | ArrayBuffer,
+    dataType: "ASSET" | "PACKET" | "STATE" = "STATE"
+  ): AffineSystem {
+    let parsedObj: Record<string, unknown> = {};
+
+    if (typeof payload === 'string') {
+      try {
+        parsedObj = JSON.parse(payload);
+      } catch {
+        // Fallback: parse key=value or regex numbers
+        const matches = payload.match(/([a-zA-Z0-9_]+)\s*[:=]\s*([+-]?[0-9]*\.?[0-9]+)/g);
+        if (matches) {
+          for (const m of matches) {
+            const [k, v] = m.split(/[:=]/);
+            if (k && v) parsedObj[k.trim()] = parseFloat(v.trim());
+          }
+        }
+      }
+    } else if (payload instanceof Uint8Array || payload instanceof ArrayBuffer) {
+      const u8 = payload instanceof Uint8Array ? payload : new Uint8Array(payload);
+      // Derive numeric channels from binary payload bytes
+      let sum = 0;
+      let maxByte = 0;
+      for (let i = 0; i < Math.min(u8.length, 64); i++) {
+        sum += u8[i];
+        if (u8[i] > maxByte) maxByte = u8[i];
+      }
+      parsedObj = {
+        byte_len: u8.length,
+        entropy_mean: u8.length > 0 ? sum / (u8.length * 255.0) : 0,
+        max_amplitude: maxByte / 255.0,
+        flux_damping: 0.82
+      };
+    } else if (typeof payload === 'object' && payload !== null) {
+      parsedObj = payload as Record<string, unknown>;
+    }
+
+    // Extract numeric channels
+    const entries: [string, number][] = [];
+    for (const [key, val] of Object.entries(parsedObj)) {
+      if (typeof val === 'number' && !isNaN(val)) {
+        entries.push([key, val]);
+      } else if (typeof val === 'boolean') {
+        entries.push([key, val ? 1.0 : 0.0]);
+      } else if (Array.isArray(val) && val.length > 0 && typeof val[0] === 'number') {
+        val.slice(0, 4).forEach((n, idx) => {
+          entries.push([`${key}_${idx}`, n]);
+        });
+      }
+    }
+
+    if (entries.length === 0) {
+      // Default minimal bounded affine channel
+      entries.push(["stasis_ground", 0.5]);
+    }
+
+    // Check for explicit expansion flags or runaway magnitudes that violate dV/dt <= 0
+    let forceExpansion = false;
+    let maxScaleFactor = 0.85; // Default contractive contraction factor
+
+    if (parsedObj.runawayEntropy || parsedObj.expansionFactor || parsedObj.isByzantineExploit) {
+      forceExpansion = true;
+    }
+
+    const var_names = entries.map(([k]) => k);
+    const n = var_names.length;
+    const A: number[][] = Array.from({ length: n }, () => Array(n).fill(0.0));
+    const b: number[] = Array(n).fill(0.0);
+
+    for (let i = 0; i < n; i++) {
+      const [k, val] = entries[i];
+      b[i] = (val % 10.0) * 0.05; // bounded translation bias
+
+      // Determine contractive multiplier for diagonal and cross-coupling
+      let alpha = 0.70;
+      if (k.toLowerCase().includes("vel") || k.toLowerCase().includes("speed")) {
+        // High kinetic velocity must dissipate
+        alpha = Math.min(0.92, Math.abs(val) > 10.0 ? 1.45 : 0.80);
+      } else if (k.toLowerCase().includes("decay") || k.toLowerCase().includes("damping")) {
+        alpha = Math.min(val, 0.95);
+      } else if (k.toLowerCase().includes("entropy") || k.toLowerCase().includes("expand")) {
+        alpha = val > 1.0 ? val : 0.88;
+      } else {
+        // Normalize val to contractive parameter
+        alpha = 0.65 + (Math.abs(val) % 1.0) * 0.25;
+      }
+
+      if (forceExpansion) {
+        alpha = Math.max(alpha, 1.35 + (i * 0.15));
+      }
+
+      A[i][i] = alpha;
+
+      // Add dissipative cross-coupling to neighbor if n > 1
+      if (n > 1) {
+        const nextIdx = (i + 1) % n;
+        const cross = forceExpansion ? 0.45 : 0.08;
+        A[i][nextIdx] = cross;
+      }
+    }
+
+    return { var_names, A, b, n };
+  }
 }
 
 /**
@@ -313,6 +423,194 @@ export class BanachSieve {
     const res = BanachSieve.check(system);
     return res.passed;
   }
+}
+
+/**
+ * Organelle 0xCA: Serialize validated data into a 64-bit Quadbit Word (covalent_quadbit_word_t)
+ * 16 nibbles (64 bits) representing 4-bit QCML opcodes & fixed-point metrics
+ */
+export function sys_covalent_pack_data_to_qbit(dataIR: AffineSystem): bigint {
+  const norm1 = BanachSieve.norm1(dataIR.A);
+  const normInf = BanachSieve.normInf(dataIR.A);
+  const mx = Math.max(norm1, normInf);
+
+  // Derive 16 nibbles (4-bit opcodes)
+  const nibbles: number[] = [];
+  
+  // Nibble 0: Stasis Anchor (STAS = 0x0)
+  nibbles.push(OMNI_OP.STAS);
+  
+  // Nibble 1: Damping / Multiplier (SMUL = 0x3)
+  nibbles.push(OMNI_OP.SMUL);
+
+  // Nibble 2: Lyapunov metric quantized to 4-bit (0 to 15)
+  const lyapNibble = Math.min(15, Math.floor(mx * 15.0));
+  nibbles.push(lyapNibble);
+
+  // Nibble 3: LYAP opcode (0x7)
+  nibbles.push(OMNI_OP.LYAP);
+
+  // Nibbles 4-7: Encoded eigenvalues / diagonal magnitudes
+  for (let i = 0; i < 4; i++) {
+    if (i < dataIR.n && dataIR.A[i]) {
+      const diagVal = Math.abs(dataIR.A[i][i] || 0.5);
+      nibbles.push(Math.min(15, Math.floor(diagVal * 15.0)));
+    } else {
+      nibbles.push(OMNI_OP.STAS);
+    }
+  }
+
+  // Nibbles 8-11: Bias vector elements / dimensions
+  for (let i = 0; i < 4; i++) {
+    if (i < dataIR.n) {
+      const bVal = Math.abs(dataIR.b[i] || 0.0);
+      nibbles.push(Math.min(15, Math.floor((bVal * 10.0) % 16)));
+    } else {
+      nibbles.push((dataIR.n + i) % 16);
+    }
+  }
+
+  // Nibble 12: Thalamic filter gate (THAL = 0xD)
+  nibbles.push(OMNI_OP.THAL);
+
+  // Nibble 13: Covalent Bond (BOND = 0xA)
+  nibbles.push(OMNI_OP.BOND);
+
+  // Nibble 14: Banach fixed point seal (BAN3 = 0xF)
+  nibbles.push(OMNI_OP.BAN3);
+
+  // Nibble 15: Parity Invariant Seal (0x1 if contractive, else 0x0)
+  nibbles.push(mx < 1.0 ? 0x1 : 0x0);
+
+  // Pack 16 nibbles into 64-bit bigint
+  let packed = 0n;
+  for (let i = 0; i < 16; i++) {
+    const shift = BigInt((15 - i) * 4);
+    packed |= (BigInt(nibbles[i] & 0xF) << shift);
+  }
+
+  return packed;
+}
+
+export function unpackQuadbitNibbles(word: bigint): number[] {
+  const nibbles: number[] = [];
+  for (let i = 0; i < 16; i++) {
+    const shift = BigInt((15 - i) * 4);
+    const nibble = Number((word >> shift) & 0xFn);
+    nibbles.push(nibble);
+  }
+  return nibbles;
+}
+
+/**
+ * Geometric Assets as Affine Functions
+ * Procedurally generates 3D Mesh vertices and triangle indices
+ * directly from a 64-bit Quadbit Word without static vertex buffers.
+ */
+export function synthesizeProceduralMeshFromQuadbit(
+  quadbitWord: bigint,
+  type: 'TORUS' | 'ICOSAHEDRON' | 'HYPERCUBE' = 'TORUS'
+): { vertices: [number, number, number][]; indices: [number, number, number][]; formula: string } {
+  const nibbles = unpackQuadbitNibbles(quadbitWord);
+  const damping = 0.5 + (nibbles[2] / 15.0) * 0.45;
+  const majorRadius = 1.0 + (nibbles[4] / 15.0) * 0.8;
+  const minorRadius = 0.35 + (nibbles[5] / 15.0) * 0.35;
+  const harmonicP = 2 + (nibbles[6] % 3);
+  const harmonicQ = 3 + (nibbles[7] % 4);
+
+  const vertices: [number, number, number][] = [];
+  const indices: [number, number, number][] = [];
+
+  if (type === 'TORUS') {
+    const segU = 24;
+    const segV = 16;
+    for (let i = 0; i <= segU; i++) {
+      const u = (i / segU) * Math.PI * 2;
+      for (let j = 0; j <= segV; j++) {
+        const v = (j / segV) * Math.PI * 2;
+        const modRadius = majorRadius + Math.sin(u * harmonicP) * 0.15 * damping;
+        const x = (modRadius + minorRadius * Math.cos(v)) * Math.cos(u);
+        const y = (modRadius + minorRadius * Math.cos(v)) * Math.sin(u);
+        const z = minorRadius * Math.sin(v) * damping + Math.cos(u * harmonicQ) * 0.12 * damping;
+        vertices.push([x, y, z]);
+      }
+    }
+    for (let i = 0; i < segU; i++) {
+      for (let j = 0; j < segV; j++) {
+        const p1 = i * (segV + 1) + j;
+        const p2 = (i + 1) * (segV + 1) + j;
+        const p3 = (i + 1) * (segV + 1) + (j + 1);
+        const p4 = i * (segV + 1) + (j + 1);
+        indices.push([p1, p2, p3]);
+        indices.push([p1, p3, p4]);
+      }
+    }
+    return {
+      vertices,
+      indices,
+      formula: `TorusAffine(R=${majorRadius.toFixed(2)}, r=${minorRadius.toFixed(2)}, lambda=${damping.toFixed(3)}, P=${harmonicP}, Q=${harmonicQ})`
+    };
+  } else if (type === 'ICOSAHEDRON') {
+    const phi = (1.0 + Math.sqrt(5.0)) / 2.0;
+    const s = damping * 1.2;
+    const baseVerts: [number, number, number][] = [
+      [-1, phi, 0], [1, phi, 0], [-1, -phi, 0], [1, -phi, 0],
+      [0, -1, phi], [0, 1, phi], [0, -1, -phi], [0, 1, -phi],
+      [phi, 0, -1], [phi, 0, 1], [-phi, 0, -1], [-phi, 0, 1]
+    ];
+    baseVerts.forEach(([x, y, z]) => vertices.push([x * s, y * s, z * s]));
+    const baseTris: [number, number, number][] = [
+      [0, 11, 5], [0, 5, 1], [0, 1, 7], [0, 7, 10], [0, 10, 11],
+      [1, 5, 9], [5, 11, 4], [11, 10, 2], [10, 7, 6], [7, 1, 8],
+      [3, 9, 4], [3, 4, 2], [3, 2, 6], [3, 6, 8], [3, 8, 9],
+      [4, 9, 5], [2, 4, 11], [6, 2, 10], [8, 6, 7], [9, 8, 1]
+    ];
+    baseTris.forEach(t => indices.push(t));
+    return {
+      vertices,
+      indices,
+      formula: `IcosahedralContraction(scale=${s.toFixed(3)}, phi=${phi.toFixed(4)}, quadbit=0x${quadbitWord.toString(16)})`
+    };
+  } else {
+    // HYPERCUBE 4D Projection
+    const s = damping * 0.9;
+    const corners = [
+      [-1,-1,-1], [1,-1,-1], [1,1,-1], [-1,1,-1],
+      [-1,-1,1], [1,-1,1], [1,1,1], [-1,1,1]
+    ];
+    corners.forEach(([x, y, z]) => vertices.push([x * s, y * s, z * s]));
+    const cubeTris: [number, number, number][] = [
+      [0,1,2], [0,2,3], [4,6,5], [4,7,6],
+      [0,4,5], [0,5,1], [2,6,7], [2,7,3],
+      [0,3,7], [0,7,4], [1,5,6], [1,6,2]
+    ];
+    cubeTris.forEach(t => indices.push(t));
+    return {
+      vertices,
+      indices,
+      formula: `HypercubeProjection(s=${s.toFixed(3)}, dissipation=${damping.toFixed(3)})`
+    };
+  }
+}
+
+/**
+ * Procedural Audio Waveform from Quadbit Word
+ * Generates 256 discrete contractive samples
+ */
+export function synthesizeProceduralWaveformFromQuadbit(quadbitWord: bigint): number[] {
+  const nibbles = unpackQuadbitNibbles(quadbitWord);
+  const samples: number[] = [];
+  const freq1 = 2 + (nibbles[4] % 6);
+  const freq2 = 5 + (nibbles[5] % 8);
+  const decayRate = 0.8 + (nibbles[2] / 15.0) * 1.5;
+
+  for (let i = 0; i < 256; i++) {
+    const t = i / 255.0;
+    const env = Math.exp(-decayRate * t * 3.0);
+    const wave = Math.sin(t * Math.PI * 2 * freq1) * 0.65 + Math.cos(t * Math.PI * 2 * freq2) * 0.35;
+    samples.push(wave * env);
+  }
+  return samples;
 }
 
 /**

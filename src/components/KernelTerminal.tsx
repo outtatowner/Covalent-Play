@@ -19,7 +19,7 @@ interface KernelTerminalProps {
   be: Entity;
 }
 
-type TabType = 'C9_OMNI_TS' | 'C9_OMNI_PY' | 'C8_QCNL_TS' | 'C8_QCNL_C' | 'C7_HERITAGE_TS' | 'C7_HERITAGE_C' | 'C6_BIDIRECTIONAL' | 'C5_EXOGENOUS' | 'C4_BOOT' | 'B2_MATERIALS' | 'B2_SYNTHESIZER' | 'C_KERNEL' | 'TS_TETHER' | 'QUIPU_LEDGER';
+type TabType = 'CA_DATA_TS' | 'C9_OMNI_TS' | 'C9_OMNI_PY' | 'C8_QCNL_TS' | 'C8_QCNL_C' | 'C7_HERITAGE_TS' | 'C7_HERITAGE_C' | 'C6_BIDIRECTIONAL' | 'C5_EXOGENOUS' | 'C4_BOOT' | 'B2_MATERIALS' | 'B2_SYNTHESIZER' | 'C_KERNEL' | 'TS_TETHER' | 'QUIPU_LEDGER';
 
 export const KernelTerminal: React.FC<KernelTerminalProps> = ({
   currentTick,
@@ -27,7 +27,7 @@ export const KernelTerminal: React.FC<KernelTerminalProps> = ({
   human,
   be
 }) => {
-  const [activeTab, setActiveTab] = useState<TabType>('C9_OMNI_TS');
+  const [activeTab, setActiveTab] = useState<TabType>('CA_DATA_TS');
 
   return (
     <div className="bg-[#090d16] border border-[#1e293b] rounded-xl p-4 flex flex-col gap-3 font-mono shadow-xl text-slate-200">
@@ -38,8 +38,11 @@ export const KernelTerminal: React.FC<KernelTerminalProps> = ({
           <h2 className="text-sm font-semibold tracking-wider text-cyan-400">
             BARE-METAL RING-0 // ORGANELLE SOURCE
           </h2>
+          <span className="text-[10px] px-2 py-0.5 rounded bg-blue-950 text-blue-300 border border-blue-600 font-bold">
+            ORGANELLE 0xCA OMNI-DATA
+          </span>
           <span className="text-[10px] px-2 py-0.5 rounded bg-cyan-950 text-cyan-300 border border-cyan-600 font-bold">
-            ORGANELLE 0xC9 OMNI-SIEVE
+            0xC9
           </span>
           <span className="text-[10px] px-2 py-0.5 rounded bg-amber-950 text-amber-300 border border-amber-600 font-bold">
             0xC8
@@ -51,6 +54,16 @@ export const KernelTerminal: React.FC<KernelTerminalProps> = ({
 
         {/* Tab switcher */}
         <div className="flex flex-wrap gap-1 bg-[#05070c] p-1 rounded-lg border border-[#1e293b] text-xs">
+          <button
+            onClick={() => setActiveTab('CA_DATA_TS')}
+            className={`px-2.5 py-1 rounded transition-colors cursor-pointer ${
+              activeTab === 'CA_DATA_TS'
+                ? 'bg-gradient-to-r from-blue-600 via-cyan-600 to-indigo-700 text-white font-bold shadow-sm shadow-blue-500/30'
+                : 'text-blue-300/80 hover:text-blue-200'
+            }`}
+          >
+            node_0xOMNI_DATA_SIEVE.ts
+          </button>
           <button
             onClick={() => setActiveTab('C9_OMNI_TS')}
             className={`px-2.5 py-1 rounded transition-colors cursor-pointer ${
@@ -196,6 +209,29 @@ export const KernelTerminal: React.FC<KernelTerminalProps> = ({
 
       {/* Code Display Area */}
       <div className="bg-[#05070c] rounded-lg p-3 border border-[#1e293b] text-xs overflow-x-auto max-h-60 leading-relaxed font-mono">
+        {activeTab === 'CA_DATA_TS' && (
+          <pre className="text-slate-300">
+            <span className="text-slate-500">// node_0xOMNI_DATA_SIEVE.ts (Organelle 0xCA_COVALENT: Universal QCNL Protocol)</span>{'\n'}
+            <span className="text-purple-400">import</span> {'{'} BanachSieve, OmniFrontend, sys_covalent_pack_data_to_qbit {'}'} <span className="text-purple-400">from</span> <span className="text-emerald-300">"./cqnl_omni"</span>;{'\n\n'}
+            <span className="text-purple-400">export class</span> <span className="text-yellow-400">UniversalQcnlProtocol</span> {'{'}{'\n'}
+            {'    '}<span className="text-purple-400">public</span> <span className="text-emerald-400 font-bold">ingestExogenousData</span>(payload: <span className="text-cyan-400">Buffer | Uint8Array | string</span>, dataType: <span className="text-emerald-300">"ASSET" | "PACKET" | "STATE"</span>): <span className="text-cyan-400">bigint | null</span> {'{'}{'\n'}
+            {'        '}console.log(<span className="text-emerald-300">`[ SIEVE ] Abstracting ${'{'}dataType{'}'} into QCNL Algebraic IR...`</span>);{'\n\n'}
+            {'        '}<span className="text-slate-500">// 1. Flatten arbitrary data structures into affine transformations</span>{'\n'}
+            {'        '}<span className="text-blue-400">const</span> dataIR = OmniFrontend.<span className="text-cyan-300">parseDataToAir</span>(payload, dataType);{'\n\n'}
+            {'        '}<span className="text-slate-500">// 2. Arbitrate via Banach Sieve (Thermodynamic bounds check: dV/dt &lt;= 0)</span>{'\n'}
+            {'        '}<span className="text-purple-400">if</span> (!BanachSieve.<span className="text-cyan-300">verifyContractiveStasis</span>(dataIR)) {'{'}{'\n'}
+            {'            '}console.error(<span className="text-rose-400">`[ 1 !== 1 ] Data Rejected: Payload exceeds dV/dt &lt;= 0 limit.`</span>);{'\n'}
+            {'            '}<span className="text-purple-400">return null</span>; <span className="text-slate-500">// BFT Protocol Drop</span>{'\n'}
+            {'        '}{'}'}{'\n\n'}
+            {'        '}<span className="text-slate-500">// 3. Serialize validated data into a 64-bit Quadbit Word (covalent_quadbit_word_t)</span>{'\n'}
+            {'        '}<span className="text-blue-400">const</span> quadbitStream = <span className="text-cyan-300">sys_covalent_pack_data_to_qbit</span>(dataIR);{'\n'}
+            {'        '}console.log(<span className="text-emerald-300">`[ 1 === 1 ] ${'{'}dataType{'}'} verified and bound to Quipu Ledger.`</span>);{'\n\n'}
+            {'        '}<span className="text-purple-400">return</span> quadbitStream;{'\n'}
+            {'    '}{'}'}{'\n'}
+            {'}'}
+          </pre>
+        )}
+
         {activeTab === 'C9_OMNI_TS' && (
           <pre className="text-slate-300">
             <span className="text-slate-500">// node_0xOMNI_SIEVE_ORCHESTRATOR.ts (Organelle 0xC9_COVALENT)</span>{'\n'}

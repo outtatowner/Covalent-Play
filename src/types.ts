@@ -764,6 +764,48 @@ export interface OmniSieveState {
   totalRejected: number;
 }
 
+// Organelle 0xCA_COVALENT: Universal QCNL Asset & Protocol Abstraction (Omni-Data Sieve)
+export type ExogenousDataType = 'ASSET' | 'PACKET' | 'STATE';
+
+export interface ProceduralAssetData {
+  vertices: [number, number, number][];
+  indices: [number, number, number][];
+  waveformSamples: number[];
+  stateRecord: Record<string, number | string>;
+  proceduralFormula: string;
+}
+
+export interface DataQuadbitStreamResult {
+  id: string;
+  dataType: ExogenousDataType;
+  name: string;
+  quadbitWord: bigint | null;
+  quadbitHex: string;
+  nibbles: number[];
+  opcodes: string[];
+  status: 'GRANTED' | 'BFT_DROPPED';
+  airSystem: AffineSystem;
+  sieveResult: BanachSieveResult;
+  bftVerdict: string;
+  bftConsensusRatio: number; // e.g. 1.0 vs 0.2
+  proceduralData?: ProceduralAssetData;
+  quipuHash: string;
+  timestamp: number;
+  payloadBytes: number;
+}
+
+export interface OmniDataSieveState {
+  activeDataType: ExogenousDataType;
+  selectedPresetId: string;
+  customPayload: string;
+  currentResult: DataQuadbitStreamResult | null;
+  history: DataQuadbitStreamResult[];
+  bftGrantCount: number;
+  bftDropCount: number;
+  activeTab: 'GEOMETRY' | 'QUADBIT_REGISTER' | 'BFT_PROTOCOL' | 'QUIPU_STREAM';
+}
+
+
 
 
 

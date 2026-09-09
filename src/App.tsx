@@ -31,6 +31,7 @@ import { BareMetalScalingMatrixModal } from './components/BareMetalScalingMatrix
 import { HeritageSieveDashboard } from './components/HeritageSieveDashboard';
 import { QcnlArbiterDashboard } from './components/QcnlArbiterDashboard';
 import { OmniSieveDashboard } from './components/OmniSieveDashboard';
+import { OmniDataSieveDashboard } from './components/OmniDataSieveDashboard';
 import { covalentUnifiedBoot } from './engine/node_0xC4_UNIFIED_BOOT';
 
 import {
@@ -55,7 +56,8 @@ import {
   Cpu,
   GitPullRequest,
   Gamepad2,
-  Sparkles
+  Sparkles,
+  Database
 } from 'lucide-react';
 
 export default function App() {
@@ -112,6 +114,7 @@ export default function App() {
   const [heritageInitialTab, setHeritageInitialTab] = useState<WorkspaceTabMode>('TAB_A_FORGE_TELEMETRY');
   const [showQcnlDashboard, setShowQcnlDashboard] = useState<boolean>(false);
   const [showOmniSieve, setShowOmniSieve] = useState<boolean>(false);
+  const [showOmniDataSieve, setShowOmniDataSieve] = useState<boolean>(false);
 
   // Key state tracking
   const keysPressed = useRef<{ [key: string]: boolean }>({});
@@ -720,6 +723,16 @@ export default function App() {
             <span>0xC9 OMNI SIEVE</span>
           </button>
 
+          {/* Organelle 0xCA: Universal QCNL Asset & Protocol Abstraction (Omni-Data Sieve) */}
+          <button
+            onClick={() => setShowOmniDataSieve(true)}
+            title="Organelle 0xCA_COVALENT: Omni-Data Sieve & BFT Protocol Gate (Geometric Assets as Affine Functions, 16-Nibble Quadbit State Classes, BFT Rollback Gatekeeper)"
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg font-bold transition-all cursor-pointer border bg-gradient-to-r from-blue-700 via-indigo-800 to-cyan-900 hover:from-blue-600 hover:to-indigo-700 text-blue-100 border-blue-400/90 shadow-md shadow-blue-500/30 ring-1 ring-blue-400"
+          >
+            <Database className="w-3.5 h-3.5 text-blue-300 animate-pulse" />
+            <span>0xCA DATA SIEVE</span>
+          </button>
+
           {/* Organelle 0xC3: Heritage Sieve E1M1 Hangar Action */}
           <button
             onClick={handleHeritageE1M1Compile}
@@ -1227,6 +1240,12 @@ export default function App() {
       <OmniSieveDashboard
         isOpen={showOmniSieve}
         onClose={() => setShowOmniSieve(false)}
+      />
+
+      {/* Organelle 0xCA: Universal QCNL Asset & Protocol Abstraction (Omni-Data Sieve) Dashboard Modal */}
+      <OmniDataSieveDashboard
+        isOpen={showOmniDataSieve}
+        onClose={() => setShowOmniDataSieve(false)}
       />
     </div>
   );
